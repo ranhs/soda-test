@@ -1,0 +1,1 @@
+console.log('------------BAR > THIS SHOUOULD NOT RUN')
