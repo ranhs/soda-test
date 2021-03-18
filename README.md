@@ -1,6 +1,6 @@
 <h1 align=center>
     <a href="https://github.com/ranhs/soda-test/wiki/01-home">
-        <img alt="Soda-Test" src="https://raw.githubusercontent.com/ranhs/soda-test/main/logo.png">
+        <img alt="Soda-Test" src="https://raw.githubusercontent.com/ranhs/soda-test/main/logo.jpg">
     </a>
     <br>
     Soda -test
