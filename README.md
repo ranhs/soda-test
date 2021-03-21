@@ -1,6 +1,6 @@
 <h1 align=center>
     <a href="https://github.com/ranhs/soda-test/wiki/01-home">
-        <img alt="Soda-Test" src="https://raw.githubusercontent.com/ranhs/soda-test/main/logo.jpg">
+        <img alt="Soda-Test" width="40%" height="40%" src="https://raw.githubusercontent.com/ranhs/soda-test/main/logo.jpg">
     </a>
     <br>
     Soda -test
@@ -111,4 +111,9 @@ Following are all the pages available in GitHub wiki:<br>
 <li><a href="https://github.com/ranhs/soda-test/wiki/20-expect">Learn how to use the <b>expect</b> method (originally defined in chai library) for validating values during unit-tests</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/21-global">Use <b>Global Sinons</b> if you want your spy/stubs to keep running during all context/class without resetting</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/22-testcases">Use Soda-Test for doing API testing by using <b>Test Cases</b></a></li>
+</ul>
+<h2>Sample Code</h2>
+The following GitHub repositories holds sample codes for soda-test:
+<ul>
+<li><a href="https://github.com/ranhs/soda-test-mocha-samples">soda-test-mocha-samples</a></li>
 </ul>
