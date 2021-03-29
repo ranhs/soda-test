@@ -125,18 +125,19 @@ export async function init(isKarma = false): Promise<void> {
         }
     }
     const ModulePrototype = Object.getPrototypeOf(module)
-    if ( !ModulePrototype._require && fs) {
-        ModulePrototype._require = ModulePrototype.require
+    if ( ModulePrototype.require && !ModulePrototype.require._hooked && fs) {
+        const _require = ModulePrototype.require
         let rewirePath = true
         ModulePrototype.require = function(path: string): Record<string, unknown> {
             const _rewirePath = rewirePath
             if ( !path.startsWith('.') || getCallerFileName(2).indexOf('\\node_modules\\') >0 ) {
                 rewirePath = false
             }
-            const _exports = this._require(path)
+            const _exports = _require.bind(this)(path)
             rewirePath = _rewirePath
             return _exports
         }
+        ModulePrototype.require._hooked = 'soda-test'
         if ( nodeJsInputFileSystem ) {
             const _readFileSync: (filename: string, encoding: string) => string | Buffer = nodeJsInputFileSystem['prototype'].readFileSync
             if ( _readFileSync['_hooked'] === 'soda-test') {
