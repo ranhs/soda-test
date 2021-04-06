@@ -1,5 +1,12 @@
-import { dirname, join} from 'path'
+import { dirname, join, sep} from 'path'
 import { anyFunction } from './executables'
+
+const excluded_libs = [
+    'soda-test',
+    'webpack',
+    'get-intrinsic',
+    'call-bind'
+]
 
 let fs: unknown
 let nodeJsInputFileSystem: unknown
@@ -31,13 +38,19 @@ export function getCallerFileName(level: number): string {
     return stackLine.substring(s+1,e)
 }
 
+function isExcludedLib(filename: string): boolean {
+    for ( const name of excluded_libs ) {
+        if ( filename.indexOf(`${sep}node_modules${sep}${name}${sep}`) >=0 )
+            return true
+    }
+    return false
+}
+
 function rewireIsNeeded(filename: string): boolean {
     if ( !filename.endsWith('.js') && !filename.endsWith('.ts') ) return false
-    if (filename.endsWith('d.ts')) return false
-    if ( filename.indexOf('node_modules') >= 0 ) {
-        if (filename.indexOf('webpack') >=0 ) return false // not rewring the webpack files
-        return true // light rewire
-    }
+    if ( filename.endsWith('d.ts') ) return false
+    if ( isExcludedLib(filename) ) return false
+    if ( filename.indexOf('node_modules') >= 0 ) return true // light rewire
     if ( filename.endsWith('.test.js') ) return false
     if ( filename.endsWith('.test.ts') ) return false
     if ( filename.endsWith('.spec.js') ) return false
