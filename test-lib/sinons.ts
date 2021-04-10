@@ -168,6 +168,17 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
                 }
                 return setStub(stub, sinonInfo.setStub, prevSinons)
             }
+            // the target method does not exist, create stub instead of it
+            const sinon = emptySinon()
+            target[targetMethodName] = sinon
+            const restore = sinon.restore
+            sinon.restore = function () {
+                delete target[targetMethodName]
+                if (restore)
+                    restore()
+                sinon.restore = restore
+            }
+            return sinon
         }
         // there is target or method name name but not both, not supported
         return undefined //not supported sinon

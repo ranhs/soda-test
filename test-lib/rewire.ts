@@ -301,9 +301,13 @@ function getTargetBasePath(caller: string, libname: string):{targetBasePath: str
     const callerDirName = dirname(caller)
     let targetBasePath = join(callerDirName, libname)
     // check if we are in webPack
-    const webpackIndex = targetBasePath.indexOf('/_karma_webpack_/')
+    let webpackIndex = targetBasePath.indexOf('/_karma_webpack_/')
     if ( webpackIndex>0 ) {
         targetBasePath = './' + targetBasePath.substr(webpackIndex+17)
+    }
+    webpackIndex = targetBasePath.indexOf('/webpack:/');
+    if (webpackIndex > 0) {
+        targetBasePath = './' + targetBasePath.substr(webpackIndex + 10);
     }
     return {targetBasePath, webpackIndex}
 }

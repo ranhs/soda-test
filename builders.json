@@ -4,6 +4,8 @@
         "karma": {
             "#implementation": "../@angular-devkit/build-angular/src/karma",
             "implementation": "./dist/build-angular/karma",
+            "#class": "../@angular-devkit/build-angular/src/karma",
+            "class": "./dist/build-angular/karma",
             "schema": "../@angular-devkit/build-angular/src/karma/schema.json",
             "description": "Run Karma unit tests."
           }      
