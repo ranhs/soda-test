@@ -1,11 +1,28 @@
 export type targetObj = Record<string, unknown>
 
+// set property of the given object to the given value, include the property on the "star" 
+// objects, if exist
+export function setProperty(obj: targetObj, name: string, value: unknown): () => void {
+    const rv = setPropertyInternal(obj, name, value)
+    if ( rv === null || !obj['soda-test-star'] ) return rv
+    const rvs: (() => void)[] = []
+    for ( const starlib of obj['soda-test-star'] as targetObj[]) {
+        const rv1 = setPropertyInternal(starlib, name, value)
+        if ( rv1 ) rvs.push(rv1)
+    }
+    if ( rvs.length === 0 ) return rv
+    return () => {
+        rv && rv()
+        rvs.forEach( rv => rv() )
+    }
+}
+
 // set the property with the given name on the given object to the given value
 // this method hanlds the case of read-only property.
 // if the property is already set to the given value, this method returns undefined
 // if the preopty cannot be set this method returns null
 // if the property was set this method return a restore method to set it back to what it was
-export function setProperty(obj: targetObj, name: string, value: unknown): () => void {
+function setPropertyInternal(obj: targetObj, name: string, value: unknown): () => void {
     try {
         if ( !obj || typeof obj !== "object" && typeof obj !== "function") return null
         const descriptor  = Object.getOwnPropertyDescriptor(obj, name)

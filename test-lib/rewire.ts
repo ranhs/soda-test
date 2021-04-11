@@ -1,5 +1,6 @@
 import { dirname, join, sep} from 'path'
 import { anyFunction } from './executables'
+import * as tslib from 'tslib'
 
 const excluded_libs = [
     'soda-test',
@@ -128,7 +129,23 @@ function afterReadFileSync(filename: string, encoding: string, result: string | 
     return result
 }
 
+function stubImportStar(): void {
+    if ( !tslib || !tslib.__importStar || tslib.__importStar['hook'] === "soda-test" ) return
+    const _importStar = tslib.__importStar
+    const _importStarHook  = function(mod: unknown): unknown { // eslint-disable-line @typescript-eslint/no-unused-vars
+        const rv = _importStar(mod)
+        if ( rv === mod ) return rv
+        if ( !Object.getOwnPropertyDescriptor(mod, 'soda-test-star') )
+            Object.defineProperty(mod, 'soda-test-star', { value: [], writable: false, enumerable: false, configurable: true })
+        mod['soda-test-star'].push(rv)
+        return rv
+    }
+    _importStar['hook'] = "soda-test"
+    eval('tslib.__importStar = _importStarHook')
+}
+
 export async function init(isKarma = false): Promise<void> {
+    stubImportStar()
     if ( isKarma ) {
         for (const key of Object.keys(require.cache)) {
             if ( key.endsWith('NodeJsInputFileSystem.js') ) {
