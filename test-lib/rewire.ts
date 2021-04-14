@@ -1,6 +1,7 @@
 import { dirname, join, sep} from 'path'
 import { anyFunction } from './executables'
 import * as tslib from 'tslib'
+import { setProperty } from './setProperty'
 
 const excluded_libs = [
     'soda-test',
@@ -141,7 +142,7 @@ function stubImportStar(): void {
         return rv
     }
     _importStar['hook'] = "soda-test"
-    eval('tslib.__importStar = _importStarHook')
+    setProperty(tslib, '__importStar', _importStarHook)
 }
 
 export async function init(isKarma = false): Promise<void> {
