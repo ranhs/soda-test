@@ -23,7 +23,6 @@ class StubbingBaseClassTest {
     @stub(DerivedClass,'super')
     BaseClassStub: SinonStub
 
-    //@comment('temporaray comment')
     @it('should stub the call to super class constructor')
     testStub(): TR {
         BaseClass.constructorCount = 0

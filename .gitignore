@@ -6,6 +6,7 @@
 /out-tsc
 soda-test-*.tgz
 package-lock.json
+testPlan.json
 
 # dependencies
 /node_modules
@@ -43,6 +44,7 @@ Thumbs.db
 **/*.js
 !.eslintrc.js
 !jest.js
+!plan.js
 **/*.map
 
 # nyc

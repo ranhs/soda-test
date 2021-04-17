@@ -114,6 +114,7 @@ export function testCase(text: string, stepsConstructor: anyClass, constructorAr
                     itText: text,
                     extraData: lastExtraData,
                     instanceIndex: lastInstanceIndex,
+                    comments: lastComments,
                     pending: false,
                     sinons: null,
                     method: function(this: CaseInfo): void | Promise<void> {
@@ -124,7 +125,7 @@ export function testCase(text: string, stepsConstructor: anyClass, constructorAr
             }
         }
         const stepMethod = (text: string, instanceIndex?: number, extraData?: extraInfo) => {
-            if ( instanceIndex === undefined ) instanceIndex = 0
+            if ( !instanceIndex ) instanceIndex = 0
             addTestStep()
             lastStep = text
             lastExtraData = extraData

@@ -15,6 +15,7 @@ export { SinonFakeTimersConfig } from 'sinon'
 import { createSinon } from "./sinons";
 import testSuite from './testSuite'
 import { isFunction, isString } from "util";
+import { PlanDescribe } from "./testplan";
 // to make the types of chai-aspromised and sinon-chai loaded
 export {} from 'chai-as-promised'
 export {} from 'sinon-chai'
@@ -54,8 +55,8 @@ export function it(text?: string, extraData?: extraInfo): methodDecorator {
 }
 
 export function comment(text: string, extraData?: extraInfo): methodDecorator {
-    return (target: targetType, propertyKey: string, descriptor: PropertyDescriptor): void => {
-        getInfo(target)
+    return (target: targetType, propertyKey: string, ignoreDescriptor: PropertyDescriptor): void => {
+        getInfo(target).setComment(propertyKey, text, extraData)
     }
 }
 
@@ -105,9 +106,14 @@ export function afterEach(): methodDecorator {
 export function describe(text: string, extraData?: extraInfo): classDecorator {
     return (constructor: constractorType): void => {
         const info = getInfo(constructor.prototype)
+        info.describeText = text
         if (extraData) info.extraData = extraData
         const describeBlock = new TestDescribe(text, info, constructor as never)
-        describeBlock.execute()
+        if ( process.env.PLAN_MODE) {
+            PlanDescribe(info)
+        } else {
+            describeBlock.execute()
+        }
     }
 }
 

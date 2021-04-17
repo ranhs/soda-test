@@ -1,6 +1,6 @@
 {
   "name": "soda-test",
-  "version": "1.0.10",
+  "version": "1.1.0",
   "description": "Package for Unit and API tests",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,7 +9,8 @@
     "test-1": "cross-env NODE_ENV=development mocha \"dist/lib/setProeprty.test\"",
     "tsc": "tsc -d && cpx index.d.ts dist",
     "buildall": "npm run tsc && npm run test",
-    "lint": "eslint --ignore-path .gitignore **/*.ts"
+    "lint": "eslint --ignore-path .gitignore **/*.ts",
+    "soda-plan": "node ./plan \"dist/lib/**/*.test.js\" testPlan.json"
   },
   "keywords": [
     "soda",
@@ -60,6 +61,7 @@
     "@types/supertest": "^2.0.9",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
+    "glob": "^7.1.6",
     "mocha": "^7.2.0",
     "reflect-metadata": "^0.1.13",
     "sinon": "^9.0.2",
