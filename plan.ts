@@ -2,8 +2,7 @@ import * as glob from 'glob'
 import { writeFileSync } from 'fs'
 import { GetPlan, PlanReset } from './test-lib/testplan'
 
-async function main(): Promise<void> {
-    const argv = process.argv
+export async function createTestPlan(argv: string[]): Promise<void> {
     if ( argv.length < 3 || argv.length > 4 || argv[0].indexOf('node') <0 || argv[1].indexOf('plan') < 0) {
         console.error('Invalid script command')
         return
@@ -24,4 +23,4 @@ async function main(): Promise<void> {
     writeFileSync(argv[3], JSON.stringify(testplan,null,2))
 }
 
-main()
+createTestPlan(process.argv)

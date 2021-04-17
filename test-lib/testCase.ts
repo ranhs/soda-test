@@ -84,7 +84,7 @@ function getSodaSteps(target: targetType): StepsCalls {
 // text - the name of the test-case
 // stepsConstructor - the class that holds the test-steps to be used
 // constructorArgs - optionaly arguments to the constractor for the class of the test-stpes
-export function testCase(text: string, stepsConstructor: anyClass, constructorArgs?: unknown[]): MethodDecorator {
+export function testCase(text: string, stepsConstructor: anyClass, constructorArgs?: unknown[], extraData?: extraInfo): MethodDecorator {
     return (target: targetType, propertyKey: string, descriptor: PropertyDescriptor): void => {
         // testStepsTarget is the prototype of the steps-class
         const testStepsTarget = stepsConstructor.prototype
@@ -95,6 +95,9 @@ export function testCase(text: string, stepsConstructor: anyClass, constructorAr
         }
         // create the case info in this class info
         const tcase = getInfo(target).getCase(propertyKey, text, createFactory(stepsConstructor, constructorArgs))
+        if ( extraData) {
+            tcase.extraData = extraData
+        }
         // get lists of the possible steps from steps-class
         const steps = getSodaSteps(testStepsTarget)
         // 

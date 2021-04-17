@@ -1,1 +1,1 @@
-require('./dist/plan')
+module.exports = require('./dist/plan')

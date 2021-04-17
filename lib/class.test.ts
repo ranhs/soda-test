@@ -1,4 +1,4 @@
-import { expect, describe, context, it, comment, TR, SinonStub, stub, importPrivate } from '.'
+import { expect, describe, context, it, TR, SinonStub, stub, importPrivate } from '.'
 
 import { DerivedClass as ExternalDerivedClass } from './class'
 

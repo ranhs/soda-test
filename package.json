@@ -1,12 +1,12 @@
 {
   "name": "soda-test",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Package for Unit and API tests",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "cross-env NODE_ENV=development mocha \"dist/lib/**/*.test.js\"",
-    "test-1": "cross-env NODE_ENV=development mocha \"dist/lib/setProeprty.test\"",
+    "test-1": "cross-env NODE_ENV=development mocha \"dist/lib/plan/*.test.js\"",
     "tsc": "tsc -d && cpx index.d.ts dist",
     "buildall": "npm run tsc && npm run test",
     "lint": "eslint --ignore-path .gitignore **/*.ts",
@@ -93,6 +93,7 @@
     "dist/build-angular",
     "dist/index.*",
     "jest.js",
-    "builders.json"
+    "builders.json",
+    "plan.js"
   ]
 }
