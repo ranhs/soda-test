@@ -1,5 +1,5 @@
 import { targetType, anyFunction } from "./executables"
-import { getInfo, CaseInfo } from "./testInfo"
+import { getInfo, CaseInfo, extraInfo, commentInfo } from "./testInfo"
 
 export type factoryMethod = () => unknown
 
@@ -101,6 +101,9 @@ export function testCase(text: string, stepsConstructor: anyClass, constructorAr
         steps.__lastCall = undefined
         let lastStep: string = undefined
         let lastInstanceIndex: number = undefined
+        let lastExtraData: extraInfo = undefined
+        let comments: commentInfo[] = []
+        let lastComments: commentInfo[] = undefined
         const addTestStep = (): void => {
             if ( steps.__lastCall ) {
                 const text = lastStep
@@ -109,6 +112,7 @@ export function testCase(text: string, stepsConstructor: anyClass, constructorAr
                 const args = steps.__lastCall.args
                 tcase.its.push({
                     itText: text,
+                    extraData: lastExtraData,
                     instanceIndex: lastInstanceIndex,
                     pending: false,
                     sinons: null,
@@ -119,15 +123,29 @@ export function testCase(text: string, stepsConstructor: anyClass, constructorAr
                 })
             }
         }
-        descriptor.value((text: string, instanceIndex?: number) => {
+        const stepMethod = (text: string, instanceIndex?: number, extraData?: extraInfo) => {
             if ( instanceIndex === undefined ) instanceIndex = 0
             addTestStep()
             lastStep = text
+            lastExtraData = extraData
+            lastComments = comments
+            comments = []
             lastInstanceIndex = instanceIndex
             return steps
-        })
+        }
+        stepMethod.comment = (text: string, extraData?: extraInfo) => {
+            const comment: commentInfo = {
+                commentText: text,
+                extraData
+            }
+            comments.push(comment)
+        }
+        descriptor.value(stepMethod)
         addTestStep()
     }
 }
 
-export type stepMethod<TSC> = (text: string, instanceIndex?: number) => TSC
+export type stepMethod<TSC> = {
+    (text: string, instanceIndex?: number, extraData?: extraInfo): TSC
+    comment: (text: string, extraData?: extraInfo) => void
+}

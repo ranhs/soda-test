@@ -44,6 +44,7 @@ if ( jest_ ) {
         describe: testLib.describe,
         context: testLib.context,
         it: testLib.it,
+        comment: testLib.comment,
         pending: testLib.pending, 
         expect: testLib.expect,
         spy: testLib.spy,
@@ -65,6 +66,7 @@ if ( jest_ ) {
     mergeInfo( exports, {
         context: testLib.context, 
         it: testLib.it, 
+        comment: testLib.comment,
         pending: testLib.pending, 
         before: testLib.before, 
         after: testLib.after, 

@@ -1,2 +1,2 @@
-export { context, it, pending, before, after, beforeEach, afterEach, describe, spy, stub, global, importPrivate, useFakeTimers, createStub, createAgrigation, rewire, expect, assert, request, SinonSpy, SinonStub, SinonSandbox, SinonFakeTimers, SinonFakeTimersConfig, sandbox, Done, Rewire, TR, PTR, CreatableClass } from './test-lib';
+export { context, it, comment, pending, before, after, beforeEach, afterEach, describe, spy, stub, global, importPrivate, useFakeTimers, createStub, createAgrigation, rewire, expect, assert, request, SinonSpy, SinonStub, SinonSandbox, SinonFakeTimers, SinonFakeTimersConfig, sandbox, Done, Rewire, TR, PTR, CreatableClass } from './test-lib';
 export { testStep, testCase, stepMethod } from './test-lib/testCase';

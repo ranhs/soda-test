@@ -3,6 +3,7 @@ export {
     describe, 
     context,
     it,
+    comment,
     spy,
     SinonSpy,
     stub,

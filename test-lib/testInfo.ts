@@ -4,7 +4,7 @@ import { targetType, anyFunction } from './executables'
 import { factoryMethod } from './testCase'
 
 export type valFunction = () => unknown | Promise<unknown>
-
+export type extraInfo = { [key: string]: string | number}
 
 export interface ControlMethods {
     beforeInner?: valFunction[]
@@ -49,10 +49,17 @@ export interface SinonInfo {
     global?: boolean
 }
 
+export class commentInfo {
+    commentText: string
+    extraData?: extraInfo
+}
+
 export class ItInfo {
+    comments?: commentInfo[]
     itText: string
     instanceIndex?: number
     pending: boolean
+    extraData?: extraInfo
     sinons: {[paramterIndex: number]: SinonInfo} = {}
     method: anyFunction
 }
@@ -62,6 +69,7 @@ export class CaseInfo {
         this.caseText = text
     }
     caseText: string
+    extraData?: extraInfo
     its: ItInfo[] = []
     instances: unknown[] = []
 }
@@ -71,6 +79,7 @@ export class ContextInfo {
         this.contextText = text
     }
     contextText: string
+    extraData?: extraInfo
     contextControlMethods: ControlMethods = {}
 
     itsAndCases: {[text: string]: ItInfo | CaseInfo} = {}
@@ -78,6 +87,7 @@ export class ContextInfo {
 
 export class DescribeInfo {
     describeText: string
+    extraData?: extraInfo
 
     currentContext: string
     contexts: {[text: string]: ContextInfo} = {}
@@ -103,14 +113,16 @@ export class DescribeInfo {
         return context
     }
 
-    setMethodContext(methodName: string, contextName = ''): void {
+    setMethodContext(methodName: string, contextName = '', contextExtraData?: extraInfo): void {
 
         if ( this.lastControlMethod && this.lastControlMethod.name === methodName ) {
             const prevContextMethods = this.getContext(this.lastControlMethod.context).contextControlMethods
             const func = prevContextMethods[this.lastControlMethod.controlName]
             prevContextMethods[this.lastControlMethod.controlName] = prevContextMethods[this.lastControlMethod.controlName+'.bak']
             delete prevContextMethods[this.lastControlMethod.controlName+'.bak']
-            this.getContext(contextName).contextControlMethods[this.lastControlMethod.controlName] = func
+            const context = this.getContext(contextName)
+            context.contextControlMethods[this.lastControlMethod.controlName] = func
+            if (contextExtraData) context.extraData = contextExtraData
             this.methodsContexts[methodName] = contextName
             this.currentContext = contextName
             return
@@ -120,7 +132,7 @@ export class DescribeInfo {
         let it: ItInfo
         if ( prevContext !== undefined ) {
             if ( prevContext === contextName ) return
-            const context: ContextInfo = this.getContext(prevContext)
+            const context = this.getContext(prevContext)
             it = context.itsAndCases[methodName] as ItInfo
             if ( !it ) return
             delete context.itsAndCases[methodName]
@@ -134,11 +146,15 @@ export class DescribeInfo {
         context.itsAndCases[methodName] = it
     }
 
-    setMemberContext(memberName: string, contextName = ''): void {
+    setMemberContext(memberName: string, contextName = '', extraData: extraInfo): void {
         if ( this.lastSinon && this.lastSinon.name === memberName ) {
             this.lastSinon.sinon.context = contextName
         }
         this.currentContext = contextName
+        if ( extraData ) {
+            const context = this.getContext(contextName)
+            context.extraData = extraData
+        }
     }
 
     getIt(methodName: string): ItInfo {
@@ -171,13 +187,23 @@ export class DescribeInfo {
         return tcase
     }
 
-    setIt(methodName: string, itText: string, itMethod: anyFunction): void {
+    setIt(methodName: string, itText: string, itMethod: anyFunction, extraData?: extraInfo): void {
         const it = this.getIt(methodName)
         it.itText = itText
+        it.extraData = extraData
         it.method = itMethod
         if ( this.currentContext ) {
             this.setMethodContext(methodName, this.currentContext)
         }
+    }
+
+    setComment(methodName: string, commentText: string, extraData?: extraInfo): void {
+        const it = this.getIt(methodName)
+        if ( it.comments === undefined ) it.comments = []
+        const comment = new commentInfo()
+        comment.commentText = commentText
+        comment.extraData = extraData
+        it.comments.splice(0,0,comment)
     }
 
     setCase(methodName: string, caseText: string, instanceConstructor: factoryMethod): CaseInfo {

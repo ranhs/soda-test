@@ -1,6 +1,6 @@
 import "reflect-metadata"
 
-import { SinonKind, SetStubType, SinonInfo, getInfo } from "./testInfo"
+import { SinonKind, SetStubType, SinonInfo, getInfo, extraInfo } from "./testInfo"
 import { TestDescribe, targetType, anyFunction } from "./executables";
 import { getCallerFileName, init as rewireInit } from "./rewire"
 export { Rewire, createAgrigation } from "./rewire"
@@ -33,23 +33,29 @@ chai.use(sinonChai as never)
 
 rewireInit()
 
-export function context(text = ''): methodDecorator {
+export function context(text = '', extraData?: extraInfo): methodDecorator {
     return (target: targetType, propertyKey: string, descriptor?: PropertyDescriptor): void => {
         if ( descriptor ) {
-            getInfo(target).setMethodContext(propertyKey, text)
+            getInfo(target).setMethodContext(propertyKey, text, extraData)
         } else {
-            getInfo(target).setMemberContext(propertyKey, text)
+            getInfo(target).setMemberContext(propertyKey, text, extraData)
         }
-        
+
     }
 }
 
-export function it(text?: string): methodDecorator {
+export function it(text?: string, extraData?: extraInfo): methodDecorator {
     return (target: targetType, propertyKey: string, descriptor: PropertyDescriptor): void => {
         if (!text) {
             text = propertyKey
         }
-        getInfo(target).setIt(propertyKey, text, descriptor.value)
+        getInfo(target).setIt(propertyKey, text, descriptor.value, extraData)
+    }
+}
+
+export function comment(text: string, extraData?: extraInfo): methodDecorator {
+    return (target: targetType, propertyKey: string, descriptor: PropertyDescriptor): void => {
+        getInfo(target)
     }
 }
 
@@ -96,9 +102,10 @@ export function afterEach(): methodDecorator {
     return afterEachMethod
 }
 
-export function describe(text: string): classDecorator {
+export function describe(text: string, extraData?: extraInfo): classDecorator {
     return (constructor: constractorType): void => {
         const info = getInfo(constructor.prototype)
+        if (extraData) info.extraData = extraData
         const describeBlock = new TestDescribe(text, info, constructor as never)
         describeBlock.execute()
     }
