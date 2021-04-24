@@ -440,11 +440,11 @@ export class TestDescribe extends ExecutableBase {
         // go over contexts
         for ( const contextName of keysof(info.contexts) ) {
             const context = info.contexts[contextName]
-            const contextSequance = new Sequensal()
-            contextSequance.addControlMethods(context.contextControlMethods, instance)
-            contextSequance.addItsAndCases(context.itsAndCases, instance)
-            if ( contextSequance.length > 0 ) {
-                this.mainExecution.push(new TestContext(context.contextText, contextSequance))
+            const contextSequence = new Sequensal()
+            contextSequence.addControlMethods(context.contextControlMethods, instance)
+            contextSequence.addItsAndCases(context.itsAndCases, instance)
+            if ( contextSequence.length > 0 ) {
+                this.mainExecution.push(new TestContext(context.contextText, contextSequence))
             }
         }
         // define execution of uncontexts
