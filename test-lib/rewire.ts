@@ -319,15 +319,19 @@ function getTargetBasePath(caller: string, libname: string):{targetBasePath: str
     const callerDirName = dirname(caller)
     let targetBasePath = join(callerDirName, libname)
     // check if we are in webPack
-    let webpackIndex = targetBasePath.indexOf('/_karma_webpack_/')
-    if ( webpackIndex>0 ) {
-        targetBasePath = './' + targetBasePath.substr(webpackIndex+17)
-    } else {
-        webpackIndex = targetBasePath.indexOf('/webpack:/');
-        if (webpackIndex > 0) {
-            targetBasePath = './' + targetBasePath.substr(webpackIndex + 10);
+    const wpStrings = ['/_karma_webpack_/webpack:/', '/_karma_webpack_/', '/webpack:/']
+    let webpackIndex: number
+    let len: number
+    for (const wpString of wpStrings ) {
+        webpackIndex = targetBasePath.indexOf(wpString)
+        if ( webpackIndex > 0 ) {
+            len = wpString.length
+            break
         }
     }
+    if ( webpackIndex>0 ) {
+        targetBasePath = './' + targetBasePath.substr(webpackIndex+len)
+    } 
     return {targetBasePath, webpackIndex}
 }
 
