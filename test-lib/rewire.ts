@@ -2,6 +2,7 @@ import { dirname, join, sep} from 'path'
 import { anyFunction } from './executables'
 import * as tslib from 'tslib'
 import { setProperty } from './setProperty'
+import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName } from './configuration'
 
 const excluded_libs = [
     'soda-test',
@@ -18,6 +19,9 @@ try {
 } catch (err) {
     // when using karma, there is no fs
 }
+const _init_configuration = (fs)?readConfiguration(fs):null
+const _readconfiguration_filename = (fs)?readConfigurationFileName():null
+
 try {
     childProcess = require('child_process')
 } catch (err) {
@@ -123,6 +127,9 @@ return fileContent
 // if the file loading is a file that need to be rewired, this code patches the answer
 // with the rewire JS code 
 function afterReadFileSync(filename: string, encoding: string, result: string | Buffer): string | Buffer {
+    if (filename === _readconfiguration_filename) {
+        return createReadConfigurationFile(_init_configuration, Buffer.isBuffer(result))
+    } 
     if ( rewireIsNeeded(filename) ) {
         // this file is JS file that is not a test file and is not under node_modules, need to rewire it
         result = PatchFileContent(result, filename)
@@ -313,6 +320,8 @@ export async function init(isKarma = false): Promise<void> {
             _module.exports = _agrigateFunction(_module.exports)
         }
     }
+    const config = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
+    initConfiguration(config)
 }
 
 function getTargetBasePath(caller: string, libname: string):{targetBasePath: string, webpackIndex: number} {
