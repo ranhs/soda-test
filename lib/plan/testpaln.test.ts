@@ -2,7 +2,7 @@ import { describe, context, it, comment, expect, spy, SinonSpy, testStep, testCa
 import { copyFileSync, unlinkSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { createTestPlan } from '../../plan'
-import { testPlan as testPlanRef } from './testplan.data'
+import { testPlan as testPlanRef, testPlan2 as testPlanRef2 } from './testplan.data'
 
 
 @describe('TestPlan1', {description: 'Test the ability to create a test plan'})
@@ -69,6 +69,16 @@ class PlanTest {
         const output = readFileSync(fullOutputFile).toString()
         unlinkSync(fullOutputFile)
         expect(output.split('\n')).to.deep.equal(JSON.stringify(testPlanRef,null,2).split('\n'))       
+    }
+
+    @it('test plan from ts')
+    async createTestPlan3() {
+        const tempOutoutFile = `testplan.${Math.random()}.json`
+        const fullOutputFile = join(__dirname, tempOutoutFile)
+        await createTestPlan(['node.exe', 'plan', join(__dirname, 'testPlan2.test.ts'), fullOutputFile])
+        const output = readFileSync(fullOutputFile).toString()
+        unlinkSync(fullOutputFile)
+        expect(output.split('\n')).to.deep.equal(JSON.stringify(testPlanRef2,null,2).split('\n'))       
     }
 
 }

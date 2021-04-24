@@ -1,5 +1,5 @@
 import * as glob from 'glob'
-const fs = require('fs')
+const fs = require('fs') // eslint-disable-line @typescript-eslint/no-var-requires
 import { GetPlan, PlanReset } from './test-lib/testplan'
  import { Compiler } from 'ts-import'
 
@@ -33,9 +33,9 @@ export async function createTestPlan(argv: string[]): Promise<void> {
     process.env.PLAN_MODE = 'YES'
     const filesPattern = argv[2]
     const matches = await new Promise<string[]>((resolve,reject) => glob(filesPattern, {absolute: true}, (err, matches) => (err)?reject(err):resolve(matches)))
-   PlanReset()
+    PlanReset()
     for ( const match of matches ) {
-        console.log(`analizing ${match}`)
+        console.info(`analizing ${match}`)
         if ( match.endsWith('.ts') ) {
             await compiler.compile(match)
         } else {

@@ -45,6 +45,9 @@ export const testPlan = [
                     } , {
                         text: 'test plan in file',
                         type: 'IT'
+                    }, {
+                        text: 'test plan from ts',
+                        type: 'IT'
                     }
                 ]
             }
@@ -83,3 +86,33 @@ export const testPlan = [
         ]
     }
 ]
+
+export const testPlan2 = [
+    {
+        text: 'TestPlan2',
+        type: 'DESCRIBE',
+        children: [
+            {
+                text: 'Test Step outside of a context',
+                type: 'COMMENT'
+            }, {
+                text: 'method1',
+                type: 'IT'
+            }, {
+                text: 'context1',
+                type: 'CONTEXT',
+                children: [
+                    {
+                        text: 'Test Step inside of a context',
+                        type: 'COMMENT'
+                    }, {
+                        text: 'second step',
+                        type: 'IT',
+                        description: 'nothing spacil'
+                    }
+                ]
+            }
+        ],
+        description: 'Placeholder for a test, that shall read as ts when creating testplan'
+    }
+] 
