@@ -322,10 +322,11 @@ function getTargetBasePath(caller: string, libname: string):{targetBasePath: str
     let webpackIndex = targetBasePath.indexOf('/_karma_webpack_/')
     if ( webpackIndex>0 ) {
         targetBasePath = './' + targetBasePath.substr(webpackIndex+17)
-    }
-    webpackIndex = targetBasePath.indexOf('/webpack:/');
-    if (webpackIndex > 0) {
-        targetBasePath = './' + targetBasePath.substr(webpackIndex + 10);
+    } else {
+        webpackIndex = targetBasePath.indexOf('/webpack:/');
+        if (webpackIndex > 0) {
+            targetBasePath = './' + targetBasePath.substr(webpackIndex + 10);
+        }
     }
     return {targetBasePath, webpackIndex}
 }
