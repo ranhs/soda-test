@@ -51,4 +51,6 @@ export async function createTestPlan(argv: string[]): Promise<void> {
     fs.writeFileSync(argv[3], JSON.stringify(testplan,null,2))
 }
 
-createTestPlan(process.argv)
+if ( !process.env.SKIP_CREATE_TESTPLAN ) {
+    createTestPlan(process.argv)
+}
