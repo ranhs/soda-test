@@ -14,10 +14,15 @@ export function readConfiguration(fs: unknown): unknown {
     }
     const filename = join(__dirname.substr(0,i),'.soda-test')
     try {
+        if ( !fs['existsSync'](filename)) {
+            console.warn(`Configuration Warnning: no configuration file exists at ${filename}`)
+            return null
+        } 
         const configStr = fs['readFileSync'](filename).toString()
         const config = JSON.parse(configStr)
         return config
-    } catch {
+    } catch (err) {
+        console.error(`Configuration Error: ${err.message}`)
         return null
     }
 }
