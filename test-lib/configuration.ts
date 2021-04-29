@@ -53,3 +53,12 @@ export function initConfiguration(config: unknown):  void {
         }
     } 
 }
+
+
+// for testabiliy only:
+export function get(name: string): unknown {
+    return eval(name)
+}
+export function set(name: string, value: unknown): void {
+    eval(`${name} = value`)
+}
