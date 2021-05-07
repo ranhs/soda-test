@@ -312,143 +312,190 @@ export class Sequensal extends ExecutableBase {
 
 export class TestDescribe extends ExecutableBase {
     private mainExecution: Sequensal
+    private instance: unknown
 
     execute(): void {
         testSuite.describe(this.name, ()=> this.mainExecution.execute())
     }
 
-    constructor(private name: string, info: DescribeInfo, constructor: constructorType) {
+    constructor(private name: string, private info: DescribeInfo, private constructorFunc: constructorType) {
         super()
 
+        this.defineGlobalControlMethods()
+        this.createInstance()
+        this.createSandboxes()
+        this.createMainSeauence()
+        this.createSinonsMembers()
+        this.defineMainControlMethodsItsAndCases()
+        this.defineContextControlMethodsItsAndCases()
+    }
+
+    private defineGlobalControlMethods() {
         // look for after and before methods:
-        const beforeMethod: valFunction = constructor.prototype.before
-        const afterMethod: valFunction = constructor.prototype.after
-        const beforeEachMethod: valFunction = constructor.prototype.beforeEach
-        const afterEachMethod: valFunction = constructor.prototype.afterEach
+        const beforeMethod: valFunction = this.constructorFunc.prototype.before
+        const afterMethod: valFunction = this.constructorFunc.prototype.after
+        const beforeEachMethod: valFunction = this.constructorFunc.prototype.beforeEach
+        const afterEachMethod: valFunction = this.constructorFunc.prototype.afterEach
         // define execution of contexts
-        if ( beforeMethod && !info.uncontext.contextControlMethods.beforeLast ) {
-            info.uncontext.contextControlMethods.beforeLast = beforeMethod
+        if ( beforeMethod && !this.info.uncontext.contextControlMethods.beforeLast ) {
+            this.info.uncontext.contextControlMethods.beforeLast = beforeMethod
         }
-        if ( afterMethod && !info.uncontext.contextControlMethods.afterFirst) {
-            info.uncontext.contextControlMethods.afterFirst = afterMethod
+        if ( afterMethod && !this.info.uncontext.contextControlMethods.afterFirst) {
+            this.info.uncontext.contextControlMethods.afterFirst = afterMethod
         }
-        if ( beforeEachMethod && !info.uncontext.contextControlMethods.beforeEachLast) {
-            info.uncontext.contextControlMethods.beforeEachLast = beforeEachMethod
+        if ( beforeEachMethod && !this.info.uncontext.contextControlMethods.beforeEachLast) {
+            this.info.uncontext.contextControlMethods.beforeEachLast = beforeEachMethod
         }
-        if ( afterEachMethod && !info.uncontext.contextControlMethods.afterEachFirst) {
-            info.uncontext.contextControlMethods.afterEachFirst = afterEachMethod
+        if ( afterEachMethod && !this.info.uncontext.contextControlMethods.afterEachFirst) {
+            this.info.uncontext.contextControlMethods.afterEachFirst = afterEachMethod
         }
 
-        // create instance:
-        const instance = Reflect.construct(constructor, [])
-        for (let i = 1; i<info.sandboxes.length; i++ ) {
-            instance[info.sandboxes[i]] = createSandbox()
+    }
+
+    private createInstance() {
+        this.instance = Reflect.construct(this.constructorFunc, [])
+    }
+
+    private createSandboxes() {
+        for (let i = 1; i<this.info.sandboxes.length; i++ ) {
+            this.instance[this.info.sandboxes[i]] = createSandbox()
         }
-        // main sequensal
+    }
+
+    private createMainSeauence() {
         this.mainExecution = new Sequensal()
-        // create sinons members
-        if ( keysof(info.sinons).length>0 ) {
-            // add code to create the sinons in the beforeEach method:
-            const initMethods: {[contextName: string]: {global: boolean, func: valFunction}[]} = {}
-            const rapupMethods: {[contextName: string]: {global: boolean, func: valFunction}[]} = {}
-            for ( const sinonName of keysof(info.sinons) ) {
-                const sinonContext: string = (info.sinons[sinonName].context)?info.sinons[sinonName].context:""
-                if ( ! initMethods[sinonContext ]) {
-                    initMethods[sinonContext] = []
-                    initMethods[sinonContext].push ( {
-                        global: info.sinons[sinonName].global,
-                        func: function() {
-                            initMethods[sinonContext]['_sinons'] = {}
-                        }
-                    })
-                }
-                if ( ! rapupMethods[sinonContext]) {
-                    rapupMethods[sinonContext] = []
-                }
-                initMethods[sinonContext].push( {
-                    global: info.sinons[sinonName].global,
-                    func: function() {
-                        this[sinonName] = createSinon(info.sinons[sinonName], initMethods[sinonContext]['_sinons']);
-                        initMethods[sinonContext]['_sinons'] = initMethods[sinonContext]['_sinons'] || {}
-                        initMethods[sinonContext]['_sinons'][sinonName] = this[sinonName]
-                        if ( info.sinons[sinonName].kind === SinonKind.Rewire ) {
-                            if ( info.sinons[sinonName].global ) {
-                                info.globalRewires.push(this[sinonName])    
-                            } else {
-                                info.localRewires.push(this[sinonName])
-                            }
-                        }
-                    }
-                })
-                rapupMethods[sinonContext].push( {
-                    global: info.sinons[sinonName].global,
-                    func: function() {
-                        if ( this[sinonName] && this[sinonName].restore ) {
-                            this[sinonName].restore()
-                        }
-                        delete this[sinonName]
-                    }
-                })
-            }
-            for (const sinonContext of keysof(initMethods) ) {
-                const describeControlMethods = info.getContext(sinonContext).contextControlMethods
-                for ( const {global,func} of initMethods[sinonContext] ) {
-                    if ( global ) {
-                        describeControlMethods.beforeInner = describeControlMethods.beforeInner || []
-                        describeControlMethods.beforeInner.push(func)
-                    } else {
-                        describeControlMethods.beforeEachInner = describeControlMethods.beforeEachInner || []
-                        describeControlMethods.beforeEachInner.push(func)
-                    }
-                }
-            }
-            // add code to resotre everything in the afterEach/after methods:
-            for (let i= keysof(rapupMethods).length-1; i>=0; i--) {
-                const sinonContext = keysof(rapupMethods)[i]
-                const describeControlMethods = info.getContext(sinonContext).contextControlMethods
-                const contextRapupMethods = rapupMethods[sinonContext]
-                for ( const {global,func} of contextRapupMethods ) {
-                    if ( global) {
-                        describeControlMethods.afterInner = describeControlMethods.afterInner || []
-                        describeControlMethods.afterInner.push(func)
-                    } else {
-                        describeControlMethods.afterEachInner = describeControlMethods.afterEachInner || []
-                        describeControlMethods.afterEachInner.push(func)
-                    }
-                }
-                describeControlMethods.afterEachInner = describeControlMethods.afterEachInner || []
-                describeControlMethods.afterEachInner.push( function() {
-                    // restore rewires
-                    for ( const rewire of info.localRewires ) {
-                        rewire.restore()
-                    }
-                    info.localRewires = []
-                })
-                describeControlMethods.afterInner = describeControlMethods.afterInner || []
-                describeControlMethods.afterInner.push( function() {
-                    // restore rewires
-                    for ( const rewire of info.globalRewires ) {
-                        rewire.restore()
-                    }
-                    info.globalRewires = []
-                })
-            }
-
-        }
+    }
+    private defineMainControlMethodsItsAndCases() {
         // update main control methods
-        this.mainExecution.addControlMethods(info.uncontext.contextControlMethods, instance)
+        this.mainExecution.addControlMethods(this.info.uncontext.contextControlMethods, this.instance)
+        // define execution of uncontexts
+        this.mainExecution.addItsAndCases(this.info.uncontext.itsAndCases, this.instance)
+    }
+
+    private defineContextControlMethodsItsAndCases() {
         // go over contexts
-        for ( const contextName of keysof(info.contexts) ) {
-            const context = info.contexts[contextName]
+        for ( const contextName of keysof(this.info.contexts) ) {
+            const context = this.info.contexts[contextName]
             const contextSequence = new Sequensal()
-            contextSequence.addControlMethods(context.contextControlMethods, instance)
-            contextSequence.addItsAndCases(context.itsAndCases, instance)
+            contextSequence.addControlMethods(context.contextControlMethods, this.instance)
+            contextSequence.addItsAndCases(context.itsAndCases, this.instance)
             if ( contextSequence.length > 0 ) {
                 this.mainExecution.push(new TestContext(context.contextText, contextSequence))
             }
         }
-        // define execution of uncontexts
-        this.mainExecution.addItsAndCases(info.uncontext.itsAndCases, instance)
     }
+
+    private createSinonsMembers() {
+
+        const info = this.info
+        // create sinons members
+        if ( keysof(info.sinons).length>0 ) {
+            const {initMethods, rapupMethods} = this.createInitAndRapupMethods(info)
+            this.addInitMethodIntoBeforeEachControlMethods(info, initMethods)
+            this.addRapupMethodsIntoAfterEachControlMethods(info, rapupMethods)
+        }
+
+    }
+
+    private createInitAndRapupMethods(info: DescribeInfo): {
+        initMethods: MethodsByContext,
+        rapupMethods: MethodsByContext
+    } {
+        const initMethods: MethodsByContext = {}
+        const rapupMethods: MethodsByContext = {}
+        for ( const sinonName of keysof(info.sinons) ) {
+            const sinonContext: string = (info.sinons[sinonName].context)?info.sinons[sinonName].context:""
+            if ( ! initMethods[sinonContext ]) {
+                initMethods[sinonContext] = []
+                initMethods[sinonContext].push ( {
+                    global: info.sinons[sinonName].global,
+                    func: function() {
+                        initMethods[sinonContext]['_sinons'] = {}
+                    }
+                })
+            }
+            if ( ! rapupMethods[sinonContext]) {
+                rapupMethods[sinonContext] = []
+            }
+            initMethods[sinonContext].push( {
+                global: info.sinons[sinonName].global,
+                func: function() {
+                    this[sinonName] = createSinon(info.sinons[sinonName], initMethods[sinonContext]['_sinons']);
+                    initMethods[sinonContext]['_sinons'] = initMethods[sinonContext]['_sinons'] || {}
+                    initMethods[sinonContext]['_sinons'][sinonName] = this[sinonName]
+                    if ( info.sinons[sinonName].kind === SinonKind.Rewire ) {
+                        if ( info.sinons[sinonName].global ) {
+                            info.globalRewires.push(this[sinonName])    
+                        } else {
+                            info.localRewires.push(this[sinonName])
+                        }
+                    }
+                }
+            })
+            rapupMethods[sinonContext].push( {
+                global: info.sinons[sinonName].global,
+                func: function() {
+                    if ( this[sinonName] && this[sinonName].restore ) {
+                        this[sinonName].restore()
+                    }
+                    delete this[sinonName]
+                }
+            })
+        }
+        return {initMethods, rapupMethods}
+    }
+
+    private addInitMethodIntoBeforeEachControlMethods(info: DescribeInfo, initMethods: MethodsByContext)  {
+        for (const sinonContext of keysof(initMethods) ) {
+            const describeControlMethods = info.getContext(sinonContext).contextControlMethods
+            for ( const {global,func} of initMethods[sinonContext] ) {
+                if ( global ) {
+                    describeControlMethods.beforeInner = describeControlMethods.beforeInner || []
+                    describeControlMethods.beforeInner.push(func)
+                } else {
+                    describeControlMethods.beforeEachInner = describeControlMethods.beforeEachInner || []
+                    describeControlMethods.beforeEachInner.push(func)
+                }
+            }
+        }
+    }
+
+    private addRapupMethodsIntoAfterEachControlMethods(info: DescribeInfo, rapupMethods: MethodsByContext) {
+        // add code to resotre everything in the afterEach/after methods:
+        for (let i= keysof(rapupMethods).length-1; i>=0; i--) {
+            const sinonContext = keysof(rapupMethods)[i]
+            const describeControlMethods = info.getContext(sinonContext).contextControlMethods
+            const contextRapupMethods = rapupMethods[sinonContext]
+            for ( const {global,func} of contextRapupMethods ) {
+                if ( global) {
+                    describeControlMethods.afterInner = describeControlMethods.afterInner || []
+                    describeControlMethods.afterInner.push(func)
+                } else {
+                    describeControlMethods.afterEachInner = describeControlMethods.afterEachInner || []
+                    describeControlMethods.afterEachInner.push(func)
+                }
+            }
+            describeControlMethods.afterEachInner = describeControlMethods.afterEachInner || []
+            describeControlMethods.afterEachInner.push( function() {
+                // restore rewires
+                for ( const rewire of info.localRewires ) {
+                    rewire.restore()
+                }
+                info.localRewires = []
+            })
+            describeControlMethods.afterInner = describeControlMethods.afterInner || []
+            describeControlMethods.afterInner.push( function() {
+                // restore rewires
+                for ( const rewire of info.globalRewires ) {
+                    rewire.restore()
+                }
+                info.globalRewires = []
+            })
+        }
+    }
+
 }
 
+interface MethodsByContext {
+    [contextName: string]: {global: boolean, func: valFunction}[]   
+}
