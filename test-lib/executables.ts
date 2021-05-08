@@ -324,7 +324,7 @@ export class TestDescribe extends ExecutableBase {
         this.defineGlobalControlMethods()
         this.createInstance()
         this.createSandboxes()
-        this.createMainSeauence()
+        this.createMainSequence()
         this.createSinonsMembers()
         this.defineMainControlMethodsItsAndCases()
         this.defineContextControlMethodsItsAndCases()
@@ -362,7 +362,7 @@ export class TestDescribe extends ExecutableBase {
         }
     }
 
-    private createMainSeauence() {
+    private createMainSequence() {
         this.mainExecution = new Sequensal()
     }
     private defineMainControlMethodsItsAndCases() {
