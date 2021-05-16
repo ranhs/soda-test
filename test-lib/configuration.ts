@@ -59,6 +59,6 @@ export function initConfiguration(config: unknown):  void {
 export function get(name: string): unknown {
     return eval(name)
 }
-export function set(name: string, value: unknown): void {
+export function set(name: string, value: unknown): void { // eslint-disable-line @typescript-eslint/no-unused-vars
     eval(`${name} = value`)
 }
