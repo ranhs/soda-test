@@ -1,7 +1,6 @@
 import { join, sep } from 'path'
 
-export function readConfiguration(fs: unknown): unknown {
-    if ( !fs ) return null
+export function getBaseDir(): string {
     let i = __dirname.indexOf(`${sep}node_modules${sep}`)
     if ( i < 0 ) {
         i = __dirname.indexOf(`${sep}soda-test${sep}`)
@@ -10,9 +9,18 @@ export function readConfiguration(fs: unknown): unknown {
         }
     }
     if ( i< 0) {
+        return ''
+    }
+    return __dirname.substr(0,i)
+}
+
+export function readConfiguration(fs: unknown): unknown {
+    if ( !fs ) return null
+    const baseDir = getBaseDir()
+    if ( !baseDir ) {
         return null
     }
-    const filename = join(__dirname.substr(0,i),'.soda-test')
+    const filename = join(baseDir,'.soda-test')
     try {
         if ( !fs['existsSync'](filename)) {
             console.warn(`Configuration Warnning: no configuration file exists at ${filename}`)

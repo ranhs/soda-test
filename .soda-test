@@ -1,5 +1,19 @@
 {
     "env": {
         "SODAENV": "GOOD"
+    },
+    "rewire": {
+        "files": {
+            "lib/config": {
+                "insertVars": [
+                    {
+                        "name": "kuku"
+                    },
+                    {
+                        "name": "foo"
+                    }
+                ]
+            }
+        }
     }
 }

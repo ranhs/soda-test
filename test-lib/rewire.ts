@@ -2,7 +2,7 @@ import { dirname, join, sep} from 'path'
 import { anyFunction } from './executables'
 import * as tslib from 'tslib'
 import { setProperty } from './setProperty'
-import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName } from './configuration'
+import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir } from './configuration'
 
 const excluded_libs = [
     'soda-test',
@@ -65,9 +65,26 @@ function rewireIsNeeded(filename: string): boolean {
     return true
 }
 
+function varsDefinitions(fileConfiguration: unknown): string {
+    let rv = ''
+    if ( fileConfiguration && fileConfiguration['insertVars'] ) {
+        try {
+            for ( const varInfo of fileConfiguration['insertVars']) {
+                if (varInfo.name) {
+                    rv += `let ${varInfo.name}\n`
+                }
+            }
+        } catch {
+            return ''
+        }
+    }
+    return rv
+}
+
 // give a file content (as tring) this method added the __get__ and __set__ method to
 // code and returned the patch code
 function PatchFileContent(fileContent: string | Buffer, filename: string): string | Buffer {
+    const fileConfiguration =  rewire_config.files[filename]
     const isBuffer = Buffer.isBuffer(fileContent)
     let content: string
     if ( isBuffer ) {
@@ -87,11 +104,12 @@ function PatchFileContent(fileContent: string | Buffer, filename: string): strin
         if ( light ) {
             content = `${content}
 Object.__rewireCurrent && Object.__rewireCurrent(require['cache'][module.id] || module, (exp,value)=>eval(exp), true, null)
-${mapCode}`
+${varsDefinitions(fileConfiguration)}${mapCode}`
         } else {
             content = `function __load(module,exports) {${content}
 
 Object.__rewireCurrent && Object.__rewireCurrent(require['cache'][module.id] || module, (exp,value)=>eval(exp), false, __load)
+${varsDefinitions(fileConfiguration)}
 return true
 }
 __load(module,exports)
@@ -102,14 +120,14 @@ ${mapCode}`
         if ( light ) {
             content = `${content}
 Object['__rewireCurrent'] && Object['__rewireCurrent'](require['cache'][module.id] || module, (exp,value)=>eval(exp), true, null)
-`
+${varsDefinitions(fileConfiguration)}`
         } else {
             content = `function __load(module,exports) {} ${content}
 
 Object['__rewireCurrent'] && Object['__rewireCurrent'](require['cache'][module.id] || module, (exp,value)=>eval(exp), false, __load)
+${varsDefinitions(fileConfiguration)}
 //}
-//__load(module,exports)
-`            
+//__load(module,exports)`            
         }
     }
 
@@ -322,6 +340,56 @@ export async function init(isKarma = false): Promise<void> {
     }
     const config = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
     initConfiguration(config)
+    rewire_config = rewireConfiguration(config)
+}
+
+interface RewireConfiguration {
+    files: {
+        [path: string]: unknown
+    }
+}
+
+let rewire_config: RewireConfiguration
+const basePath = getBaseDir()
+const distPath = join(basePath, 'dist')
+
+function toFullPaths(path: string): string[] {
+    path = path.replace('/', sep)
+    const path1 = join(distPath, path)
+    path = join(basePath, path)
+    if ( path.endsWith('.js') || path.endsWith('.ts') ) {
+        return [path, path1]
+    } else {
+        return [
+            path + '.js',
+            path1 + '.js',
+            path + '.ts',
+            join(path, 'index.js'),
+            join(path1, 'index.js'),
+            join(path, 'index.ts')
+        ]
+    }
+}
+
+function rewireConfiguration(config: unknown): RewireConfiguration {
+    const rewireConfiguration: RewireConfiguration = {
+        files: {}
+    }
+    
+    if (config && config['rewire']) {
+        const rewireConfig: RewireConfiguration = config['rewire']
+        if ( typeof rewireConfig === 'object' ) {
+            if ( rewireConfig.files && typeof rewireConfig.files === 'object')
+            for ( const key in rewireConfig.files ) {
+                const fullPaths = toFullPaths(key)
+                for (const path of fullPaths) {
+                    rewireConfiguration.files[path] = rewireConfig.files[key]
+                }
+            }
+        }
+    } 
+
+    return rewireConfiguration
 }
 
 function getTargetBasePath(caller: string, libname: string):{targetBasePath: string, webpackIndex: number} {

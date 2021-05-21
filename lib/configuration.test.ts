@@ -1,5 +1,5 @@
 // unit test for the configuration file features
-import { describe, context, expect, it, stub, spy, SinonStub, SinonSpy, TR } from '.'
+import { describe, context, expect, it, stub, spy, rewire, SinonStub, SinonSpy, TR, Rewire } from '.'
 import { join } from 'path'
 
 import { readConfiguration, initConfiguration } from '../test-lib/configuration'
@@ -115,5 +115,36 @@ class ConfigurationTest {
         delete process.env.__dummy1
         delete process.env.__dummy2
     }
+
+@context('insertVars')
+
+    @rewire('./config')
+    configRewire: Rewire
+
+    @it('should add "kuku" on config.js')
+    insertVars1(): TR {
+        expect(this.configRewire.get('kuku')).to.be.undefined
+        this.configRewire.set('kuku', 3)
+        expect(this.configRewire.get('kuku')).to.be.equal(3)
+    }
+
+    @it('should add "foo" on config.js')
+    insertVars2(): TR {
+        expect(this.configRewire.get('foo')).to.be.undefined
+        this.configRewire.set('foo', 'X')
+        expect(this.configRewire.get('foo')).to.be.equal('X')
+    }
+
+    @it('should not add "klay" on config.js')
+    insertVars3(): TR {
+        let error: Error
+        try {
+            this.configRewire.get('klay')
+        } catch (err) {
+            error = err
+        }
+        expect(error).to.exist.to.have.property('message', 'klay is not defined')
+    }
+
 
 }
