@@ -180,48 +180,46 @@ export async function init(isKarma = false): Promise<void> {
             }
         }
     }
-    if ( fs) {
-        if ( nodeJsInputFileSystem ) {
-            const _readFileSync: (filename: string, encoding: string) => string | Buffer = nodeJsInputFileSystem['prototype'].readFileSync
+    if ( nodeJsInputFileSystem ) {
+        const _readFileSync: (filename: string, encoding: string) => string | Buffer = nodeJsInputFileSystem['prototype'].readFileSync
+        if ( _readFileSync['_hooked'] === 'soda-test') {
+            // already hooked
+        } else {
+            nodeJsInputFileSystem['prototype'].readFileSync = function(filename: string, encoding: string): string | Buffer {
+                const result = _readFileSync(filename, encoding)
+                return afterReadFileSync(filename, encoding, result)
+            }
+        }
+    } else {
+        if ( fs ) {
+            // hook the fs.readFileSync to call method after it
+            const _fs = fs
+            const _readFileSync: (filename: string, encoding: string) => string = fs['readFileSync'] as never
             if ( _readFileSync['_hooked'] === 'soda-test') {
                 // already hooked
             } else {
-                nodeJsInputFileSystem['prototype'].readFileSync = function(filename: string, encoding: string): string | Buffer {
-                    const result = _readFileSync(filename, encoding)
-                    return afterReadFileSync(filename, encoding, result)
+                _fs['readFileSync'] = function(filename: string, encoding: string): string {
+                    const result: string = _readFileSync(filename, encoding)
+                    return afterReadFileSync(filename, encoding, result) as string
                 }
+                _fs['readFileSync']['_hooked'] = 'soda-test'
             }
-        } else {
-            if ( fs ) {
-                // hook the fs.readFileSync to call method after it
-                const _fs = fs
-                const _readFileSync: (filename: string, encoding: string) => string = fs['readFileSync'] as never
-                if ( _readFileSync['_hooked'] === 'soda-test') {
-                    // already hooked
-                } else {
-                    _fs['readFileSync'] = function(filename: string, encoding: string): string {
-                        const result: string = _readFileSync(filename, encoding)
-                        return afterReadFileSync(filename, encoding, result) as string
+        }
+        if ( childProcess ) {
+            // hook the child_process.fork to init rewire on jest chid processes
+            const _fork: (modulePath: string, args?: ReadonlyArray<string>, options?: unknown) => unknown = childProcess['fork'] as never
+            if ( _fork['_hooked'] === 'soda-test') {
+                // already hooked
+            } else {
+                childProcess['fork'] = function(modulePath: string, args?: ReadonlyArray<string>, options?: unknown): unknown {
+                    const i = __dirname.indexOf('node_modules')
+                    const s = __dirname[i-1]
+                    if ( modulePath ===`${__dirname.substr(0,i)}node_modules${s}jest-worker${s}build${s}workers${s}processChild.js`) {
+                        modulePath = `${__dirname}${s}processChild.js`
                     }
-                    _fs['readFileSync']['_hooked'] = 'soda-test'
+                    return _fork(modulePath, args, options)
                 }
-            }
-            if ( childProcess ) {
-                // hook the child_process.fork to init rewire on jest chid processes
-                const _fork: (modulePath: string, args?: ReadonlyArray<string>, options?: unknown) => unknown = childProcess['fork'] as never
-                if ( _fork['_hooked'] === 'soda-test') {
-                    // already hooked
-                } else {
-                    childProcess['fork'] = function(modulePath: string, args?: ReadonlyArray<string>, options?: unknown): unknown {
-                        const i = __dirname.indexOf('node_modules')
-                        const s = __dirname[i-1]
-                        if ( modulePath ===`${__dirname.substr(0,i)}node_modules${s}jest-worker${s}build${s}workers${s}processChild.js`) {
-                            modulePath = `${__dirname}${s}processChild.js`
-                        }
-                        return _fork(modulePath, args, options)
-                    }
-                    childProcess['fork']['_hooked'] = 'soda-test'
-                }
+                childProcess['fork']['_hooked'] = 'soda-test'
             }
         }
     }
