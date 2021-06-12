@@ -111,6 +111,8 @@ Following are all the pages available in GitHub wiki:<br>
 <li><a href="https://github.com/ranhs/soda-test/wiki/20-expect">Learn how to use the <b>expect</b> method (originally defined in chai library) for validating values during unit-tests</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/21-global">Use <b>Global Sinons</b> if you want your spy/stubs to keep running during all context/class without resetting</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/22-testcases">Use Soda-Test for doing API testing by using <b>Test Cases</b></a></li>
+<li><a href="https://github.com/ranhs/soda-test/wiki/23-testplan">Use Soda-Test to generate a JSON document about your tests</a></li>
+<li><a href="https://github.com/ranhs/soda-test/wiki/24-configuration">Use Soda-Test configuration file to costumize soda-test abilities</a></li>
 </ul>
 <h2>Sample Code</h2>
 The following GitHub repositories holds sample codes for soda-test:
