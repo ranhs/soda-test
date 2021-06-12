@@ -242,7 +242,7 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
                     }
                     return sinon
                 }
-                // creating a sutb method on the prototype
+                // creating a stub method on the prototype
                 let sinon: SinonSpy | SinonStub
                 let restore: () => void
                 if ( sinonInfo.setStub && sinonInfo.setStub.type === SetStubType.Access ) {
