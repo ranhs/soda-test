@@ -323,7 +323,10 @@ export async function init(isKarma = false): Promise<void> {
             _module.exports = _agrigateFunction(_module.exports)
         }
     }
-    const config = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
+    let config = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
+    if ( config.placeholder && fs) {
+        config = readConfiguration(fs)
+    }
     initConfiguration(config)
     rewire_config = rewireConfiguration(config)
 }
