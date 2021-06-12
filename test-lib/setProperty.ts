@@ -82,11 +82,11 @@ function setPropertyInternal(obj: targetObj, name: string, value: unknown): () =
                 // connot reconfigure the get method
                 return null
             }
-            // if we got here, the propety exist, but is is not by value and does not have a get method
-            // maybe it is a write only property. Anyway, there is nothing we can do
-            return null
         }
-    } catch {
+        // if we got here, the propety exist, but is is not by value and does not have a get method
+        // maybe it is a write only property. Anyway, there is nothing we can do
+        return null
+} catch {
         // somethind went wrong
         return null
     }

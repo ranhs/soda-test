@@ -226,42 +226,7 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
         const prototype = class2stub.prototype
         if ( prototype ) {
             if ( prototype.hasOwnProperty(sinonInfo.memberMethod) ) {
-                // the 'memberMethod' to spy/stub exists on the class prototype
-                const descriptor = Object.getOwnPropertyDescriptor(prototype, sinonInfo.memberMethod)
-                let descriptor2: PropertyDescriptor = undefined
-                if ( (descriptor.get && !descriptor.set) ) {
-                    // this is a read-only property, add a set method
-                    const _get = descriptor.get
-                    let _newValue = undefined
-                    descriptor2 = {
-                        get: (): unknown => {
-                            return _newValue || _get()
-                        },
-                        set: (value) => {
-                            _newValue = value
-                        }
-                    }
-                    Object.defineProperty(prototype, sinonInfo.memberMethod, descriptor2)
-                } else if ( !descriptor.get && !descriptor.writable ) {
-                    // this is a read-only property, change it to we writable
-                    descriptor2 = {
-                        value: descriptor.value,
-                        writable: true
-                    }
-                    Object.defineProperty(prototype, sinonInfo.memberMethod, descriptor2)
-                }
-                // this is a writable member
-                const sinon =  bindSinon( prototype, sinonInfo.memberMethod )
-                if ( descriptor2 ) {
-                    // we have changed the descriptor, need to restore it
-                    const restore = sinon.restore
-                    sinon.restore = () => {
-                        if (restore) restore()
-                        Object.defineProperty(prototype, sinonInfo.memberMethod, descriptor)
-                        sinon.restore = restore
-                    }
-                }
-                return sinon
+                return bindSinon( prototype, sinonInfo.memberMethod )
             } else { 
                 // the class proeprty does not have the method member defined
                 if ( sinonInfo.memberMethod === 'super') {
@@ -278,20 +243,20 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
                     return sinon
                 }
                 // creating a sutb method on the prototype
-                if ( !Object.getOwnPropertyDescriptor(prototype, sinonInfo.memberMethod) ) {
-                    let descriptor: PropertyDescriptor = { value: () => null}
-                    if ( sinonInfo.setStub && sinonInfo.setStub.type === SetStubType.Access ) {
-                        descriptor = { get: () => null, set: (ignore: unknown)=>{/*placeholder*/} }
-                    }
-                    Object.defineProperty(prototype, sinonInfo.memberMethod, descriptor)
+                let sinon: SinonSpy | SinonStub
+                let restore: () => void
+                if ( sinonInfo.setStub && sinonInfo.setStub.type === SetStubType.Access ) {
+                    Object.defineProperty(prototype, sinonInfo.memberMethod, { get: () => null })
+                    sinon = bindSinon(prototype,sinonInfo.memberMethod)
+                    restore = () => { delete prototype[sinonInfo.memberMethod]}
+                } else {
+                    sinon = emptySinon()
+                    restore =  setProperty(prototype,sinonInfo.memberMethod, sinon)
                 }
-                const sinon = bindSinon(prototype, sinonInfo.memberMethod)
-                //prototype[sinonInfo.memberMethod] = sinon
-                const restore = sinon.restore
-                sinon.restore = function(): void {
-                    delete prototype[sinonInfo.memberMethod]
-                    sinon.restore = restore
-                    if ( restore ) restore()
+                const _resotre = sinon.restore
+                sinon.restore = () => {
+                    restore && restore()
+                    _resotre && _resotre()
                 }
                 return sinon
             }
