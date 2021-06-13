@@ -252,7 +252,7 @@ export class Sequensal extends ExecutableBase {
         this.steps.push(step)
     }
 
-    get length(): number {
+    getLength(): number {
         return this.steps.length
     }
 
@@ -379,7 +379,7 @@ export class TestDescribe extends ExecutableBase {
             const contextSequence = new Sequensal()
             contextSequence.addControlMethods(context.contextControlMethods, this.instance)
             contextSequence.addItsAndCases(context.itsAndCases, this.instance)
-            if ( contextSequence.length > 0 ) {
+            if ( contextSequence.getLength() > 0 ) {
                 this.mainExecution.push(new TestContext(context.contextText, contextSequence))
             }
         }
