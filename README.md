@@ -107,7 +107,7 @@ Following are all the pages available in GitHub wiki:<br>
 <li><a href="https://github.com/ranhs/soda-test/wiki/16-createstub">You can <b>Create Stub</b> when importing a module to avoid it from doing external actions</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/17-timers">Use sinon <b>Fake-Timers</b> to simulate time advancing without waiting it to pass</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/18-creatableclass"><b>Creatable Class</b> feature allows you create an instance of an abstract or private class, so you can test it</a></li>
-<li><a href="https://github.com/ranhs/soda-test/wiki/19-agrigation">You can use <b>Aggregation</b> of method during import, so when you stub them during the test it will take effect, even if the function was saved in advanced</a></li>
+<li><a href="https://github.com/ranhs/soda-test/wiki/19-aggregation">You can use <b>Aggregation</b> of method during import, so when you stub them during the test it will take effect, even if the function was saved in advanced</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/20-expect">Learn how to use the <b>expect</b> method (originally defined in chai library) for validating values during unit-tests</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/21-global">Use <b>Global Sinons</b> if you want your spy/stubs to keep running during all context/class without resetting</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/22-testcases">Use Soda-Test for doing API testing by using <b>Test Cases</b></a></li>

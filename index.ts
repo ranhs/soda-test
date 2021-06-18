@@ -79,7 +79,8 @@ if ( jest_ ) {
         importPrivate: testLib.importPrivate,
         useFakeTimers: testLib.useFakeTimers,
         createStub: testLib.createStub,
-        createAgrigation: testLib.createAgrigation,
+        createAggregation: testLib.createAggregation,
+        createAgrigation: testLib.createAggregation, // temporaray save wrong spelling for backword competability
         rewire: testLib.rewire,
         expect: testLib.expect,
         assert: testLib.assert,

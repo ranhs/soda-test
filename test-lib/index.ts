@@ -3,7 +3,7 @@ import "reflect-metadata"
 import { SinonKind, SetStubType, SinonInfo, getInfo, extraInfo } from "./testInfo"
 import { TestDescribe, targetType, anyFunction } from "./executables";
 import { getCallerFileName, init as rewireInit } from "./rewire"
-export { Rewire, createAgrigation } from "./rewire"
+export { Rewire, createAggregation } from "./rewire"
 import * as _assert from "assert"
 import * as _request from 'supertest'
 import * as chai from "chai"

@@ -24,7 +24,7 @@ export {
     afterEach, 
     pending,
     createStub, 
-    createAgrigation,
+    createAggregation,
     importPrivate,
     request,
     global,

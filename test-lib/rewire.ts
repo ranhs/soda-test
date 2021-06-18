@@ -252,18 +252,18 @@ export async function init(isKarma = false): Promise<void> {
         return true
     }
 
-    const _agrigateFunction = function(func: unknown): unknown {
-        // no need to agrigate if it is not a function
+    const _aggregateFunction = function(func: unknown): unknown {
+        // no need to aggregate if it is not a function
         if ( !isNonClassFunction(func) ) return func
 
         if ( func['__org_func__'] ) {
-            // this is already the agrigated funcion
+            // this is already the aggregated funcion
             return func
         }
 
-        if ( func['__agr_func__'] ) {
-            // there is already an agrigation for this function
-            return func['__agr_func__']
+        if ( func['__agg_func__'] ) {
+            // there is already an aggregation for this function
+            return func['__agg_func__']
         }
 
         // get all properties of the function 
@@ -277,36 +277,36 @@ export async function init(isKarma = false): Promise<void> {
             props[key].configurable = true
         }
 
-        // create a agrigation function
-        const agrigateFunction = function(...args) {
-            return agrigateFunction['__org_func__'].apply(this, args)
+        // create a aggregation function
+        const aggregateFunction = function(...args) {
+            return aggregateFunction['__org_func__'].apply(this, args)
         }
 
         // copy original properites
-        Object.defineProperties(agrigateFunction, props)
+        Object.defineProperties(aggregateFunction, props)
 
         // rewire prototypes
         const _orgPrototype = Object.getPrototypeOf(func)
-        Object.setPrototypeOf(agrigateFunction, _orgPrototype)
-        Object.setPrototypeOf(func, agrigateFunction)
+        Object.setPrototypeOf(aggregateFunction, _orgPrototype)
+        Object.setPrototypeOf(func, aggregateFunction)
 
         // save the original method
-        Object.defineProperty(agrigateFunction, '__org_func__', {
+        Object.defineProperty(aggregateFunction, '__org_func__', {
             value: func,
             writable: true,
             configurable: true,
             enumerable: false
         })
 
-        // point to agrigator
-        Object.defineProperty(func, '__agr_func__', {
-            value: agrigateFunction,
+        // point to aggregator
+        Object.defineProperty(func, '__agg_func__', {
+            value: aggregateFunction,
             writable: true,
             configurable: true,
             enumerable: false
         })
 
-        return agrigateFunction
+        return aggregateFunction
     }
 
     Object['__rewireCurrent'] = function(_module: NodeModule, _eval: (exp: string, value: unknown) => unknown, light: boolean, __load?: (module: NodeModule, exports: unknown) => void) {
@@ -320,7 +320,7 @@ export async function init(isKarma = false): Promise<void> {
             _module.exports.__reload__ = __load
         }
         if ( isNonClassFunction(_module.exports) ) {
-            _module.exports = _agrigateFunction(_module.exports)
+            _module.exports = _aggregateFunction(_module.exports)
         }
     }
     let config = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
@@ -584,30 +584,30 @@ export function reloadLibRewire(libname: string, caller: string): Rewire {
     }
 }
 
-interface AgrigationMethod extends anyFunction {
+interface AggregationMethod extends anyFunction {
     origin?: anyFunction
     restore?: () => void
 }
 
-export function createAgrigation(libname: string, methodName: string): AgrigationMethod {
+export function createAggregation(libname: string, methodName: string): AggregationMethod {
     const caller = getCallerFileName(1)
 
     const rewire = getLibRewire(libname, caller)
     const lib = rewire.lib()
 
-    const agrigateMethod = function(...args: unknown[]): unknown {
+    const aggregateMethod = function(...args: unknown[]): unknown {
         return (lib[methodName] as anyFunction).apply(this, args)
     }
 
-    const agrigate: AgrigationMethod = agrigateMethod
+    const aggregate: AggregationMethod = aggregateMethod
 
-    lib[methodName] = agrigateMethod
+    lib[methodName] = aggregateMethod
 
-    agrigate.origin = lib[methodName] as anyFunction
+    aggregate.origin = lib[methodName] as anyFunction
 
-    agrigate.restore = function(): void {
-        lib[methodName] = agrigate.origin
+    aggregate.restore = function(): void {
+        lib[methodName] = aggregate.origin
     }
 
-    return agrigate
+    return aggregate
 }

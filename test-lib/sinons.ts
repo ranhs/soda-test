@@ -73,11 +73,11 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
     }
     let targetMethodName = sinonInfo.method
     if ( target && !targetMethodName ) {
-        // method name is not specified, maybe we have agrigation method
+        // method name is not specified, maybe we have aggregation method
         if ( target['__org_func__'] ) {
             targetMethodName = '__org_func__'
         } else {
-            // no agrigation, but maybe subbing/spying the deafult method is good enough
+            // no aggregation, but maybe subbing/spying the deafult method is good enough
             if ( target['default'] ) {
                 targetMethodName = 'default'
             }

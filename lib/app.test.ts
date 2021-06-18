@@ -1,7 +1,7 @@
 // NODE ONLY
-import { expect, describe, it, TR, PTR, SinonStub, createStub, createAgrigation, context, stub, importPrivate, beforeEach, request } from '.'
+import { expect, describe, it, TR, PTR, SinonStub, createStub, createAggregation, context, stub, importPrivate, beforeEach, request } from '.'
 import * as express from 'express'
-const isAuthrizedAgr = createAgrigation('./auth', 'isAuthorized')
+const isAuthrizedAgr = createAggregation('./auth', 'isAuthorized')
 const connectStub: SinonStub = createStub('mongoose', 'connect').returns(null)
 import { app } from './app'
 import { NextFunction } from 'express-serve-static-core'
