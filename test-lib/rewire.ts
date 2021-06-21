@@ -601,9 +601,9 @@ export function createAggregation(libname: string, methodName: string): Aggregat
 
     const aggregate: AggregationMethod = aggregateMethod
 
-    lib[methodName] = aggregateMethod
-
     aggregate.origin = lib[methodName] as anyFunction
+
+    lib[methodName] = aggregateMethod
 
     aggregate.restore = function(): void {
         lib[methodName] = aggregate.origin
