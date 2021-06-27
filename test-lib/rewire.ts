@@ -442,7 +442,7 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
         if ( err.code === 'MODULE_NOT_FOUND' ) {
             // search for the module
             for (const path in require.cache) {
-                if (path.startsWith(`./node_modules/${libname}/`)) {
+                if (path.startsWith(`./node_modules/${libname}/`) || path.startsWith(`./node_modules/${libname}-browserify/`)) {
                     return require.cache[path].exports
                 }
             }
