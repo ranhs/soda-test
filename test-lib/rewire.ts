@@ -84,7 +84,7 @@ function varsDefinitions(fileConfiguration: unknown): string {
 // give a file content (as tring) this method added the __get__ and __set__ method to
 // code and returned the patch code
 function PatchFileContent(fileContent: string | Buffer, filename: string): string | Buffer {
-    const fileConfiguration =  rewire_config.files[filename]
+    const fileConfiguration =  (rewire_config && rewire_config.files)? rewire_config.files[filename] : undefined
     const isBuffer = Buffer.isBuffer(fileContent)
     let content: string
     if ( isBuffer ) {
@@ -229,14 +229,14 @@ export async function init(isKarma = false): Promise<void> {
     const _defineProperty = Object.defineProperty
     init['_defineProperty'] = _defineProperty // for testing
     if ( _defineProperty['_hooked'] !== 'soda-test' ) {
-        Object.defineProperty = (o: unknown, p: PropertyKey, attributes: PropertyDescriptor) => {
+        Object.defineProperty = (o: never, p: PropertyKey, attributes: PropertyDescriptor) => {
             const desc = Object.getOwnPropertyDescriptor(o,p)
             if ( desc && !desc.configurable ) {
                 return _defineProperty(o, p, attributes)
             } else {
                 return _defineProperty(o, p, {...attributes, configurable: true})
             }
-        }
+        } 
         Object.defineProperty['_hooked'] = 'soda-test'
     }
 
