@@ -5,6 +5,13 @@ import { join } from 'path'
 import { readConfiguration, initConfiguration } from '../test-lib/configuration'
 import * as configuration from '../test-lib/configuration'
 
+const emptyConfiguration: configuration.SodaTestConfiguration = {
+    env: {},
+    rewire: {
+        files: {}
+    }
+}
+
 @describe('configuration')
 class ConfigurationTest {
 
@@ -43,17 +50,17 @@ class ConfigurationTest {
         }
     }
 
-    @it('should return null if no fs')
+    @it('should return empty configuration if no fs')
     readConfiguration1(): TR {
         const config = configuration.readConfiguration(null)
-        expect (config).to.be.null
+        expect (config).to.deep.equal(emptyConfiguration)
     }
 
-    @it('should return null if __dirname does not contains node_modules or soda-test')
+    @it('should return empty configuration if __dirname does not contains node_modules or soda-test')
     readConfiguration2(): TR {
         configuration.set('__dirname', join("C:","Kuku","configuration.js"))
         const config = configuration.readConfiguration(this.fs())
-        expect(config).to.be.null
+        expect(config).to.deep.equal(emptyConfiguration)
         expect(this.existsSyncStub).to.not.have.been.called
     }
 
@@ -61,7 +68,7 @@ class ConfigurationTest {
     readConfiugration3(): TR {
         configuration.set('__dirname', join("C:","Kuku", "node_modules", "soda-test", "dist", "test-lib", "configuration.js"))
         const config = readConfiguration(this.fs())
-        expect(config).to.be.null
+        expect(config).to.deep.equal(emptyConfiguration)
         const filename =  join("C:", "Kuku", ".soda-test")
         expect(this.existsSyncStub).to.have.been.calledOnce.calledWith(filename )
         expect(this.consoleWarnSpy).to.have.been.calledWith(`Configuration Warnning: no configuration file exists at ${filename}`)
@@ -71,7 +78,7 @@ class ConfigurationTest {
     readConfiugration4(): TR {
         configuration.set('__dirname', join("C:","soda-test", "dist", "test-lib", "configuration.js"))
         const config = readConfiguration(this.fs())
-        expect(config).to.be.null
+        expect(config).to.deep.equal(emptyConfiguration)
         const filename =  join("C:", "soda-test", ".soda-test")
         expect(this.existsSyncStub).to.have.been.calledOnce.calledWith(filename )
         expect(this.consoleWarnSpy).to.have.been.calledWith(`Configuration Warnning: no configuration file exists at ${filename}`)
@@ -82,7 +89,7 @@ class ConfigurationTest {
         configuration.set('__dirname', join("C:","soda-test", "dist", "test-lib", "configuration.js"))
         this.existsSyncStub.callsFake(()=> {throw new Error("Dummy Error")})      
         const config = readConfiguration(this.fs())
-        expect(config).to.be.null
+        expect(config).to.deep.equal(emptyConfiguration)
         const filename =  join("C:", "soda-test", ".soda-test")
         expect(this.existsSyncStub).to.have.been.calledOnce.calledWith(filename )
         expect(this.consoleErrorSpy).to.have.been.calledWith(`Configuration Error: Dummy Error`)
@@ -96,7 +103,7 @@ class ConfigurationTest {
         const filename =  join("C:", "soda-test", ".soda-test")
         expect(this.existsSyncStub).to.have.been.calledOnce.calledWith(filename )
         expect(this.readFileSyncStub).to.have.been.calledOnce.calledWith(filename)
-        expect(config).to.deep.equals({dummy: 'Value'})
+        expect(config).to.deep.equals({dummy: 'Value', ...emptyConfiguration})
     }
 
 @context('initConfiguration')
@@ -107,7 +114,8 @@ class ConfigurationTest {
             env: {
                 __dummy1: 'AA',
                 __dummy2: 'BB'
-            }
+            },
+            rewire: {files: {}}
         })
         expect(process.env.__dummy1).to.equal('AA')
         expect(process.env.__dummy2).to.equal('BB')

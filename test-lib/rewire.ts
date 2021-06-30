@@ -2,7 +2,7 @@ import { dirname, join, sep} from 'path'
 import { anyFunction } from './executables'
 import * as tslib from 'tslib'
 import { setProperty } from './setProperty'
-import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir } from './configuration'
+import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir, SodaTestConfiguration, RewireConfiguration } from './configuration'
 
 const excluded_libs = [
     'soda-test',
@@ -323,18 +323,12 @@ export async function init(isKarma = false): Promise<void> {
             _module.exports = _aggregateFunction(_module.exports)
         }
     }
-    let config = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
+    let config: SodaTestConfiguration = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
     if ( config.placeholder && fs) {
         config = readConfiguration(fs)
     }
     initConfiguration(config)
     rewire_config = rewireConfiguration(config)
-}
-
-interface RewireConfiguration {
-    files: {
-        [path: string]: unknown
-    }
 }
 
 let rewire_config: RewireConfiguration
@@ -359,23 +353,18 @@ function toFullPaths(path: string): string[] {
     }
 }
 
-function rewireConfiguration(config: unknown): RewireConfiguration {
+function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration {
     const rewireConfiguration: RewireConfiguration = {
         files: {}
     }
     
-    if (config && config['rewire']) {
-        const rewireConfig: RewireConfiguration = config['rewire']
-        if ( typeof rewireConfig === 'object' ) {
-            if ( rewireConfig.files && typeof rewireConfig.files === 'object')
-            for ( const key in rewireConfig.files ) {
-                const fullPaths = toFullPaths(key)
-                for (const path of fullPaths) {
-                    rewireConfiguration.files[path] = rewireConfig.files[key]
-                }
-            }
+    const rewireConfig: RewireConfiguration = config.rewire
+    for ( const key in rewireConfig.files ) {
+        const fullPaths = toFullPaths(key)
+        for (const path of fullPaths) {
+            rewireConfiguration.files[path] = rewireConfig.files[key]
         }
-    } 
+    }
 
     return rewireConfiguration
 }
