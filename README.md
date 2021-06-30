@@ -5,8 +5,20 @@
     <br>
     Soda -test
 </h1>
-<p align=center>
-    package for unit and component testing Of Nodejs and Angular projects.
+<p align=left>
+This package is easiest way to write unit-test.<br>
+We have gathered all the features you need from various packages, enhance them, and put them all into one, easy to use package.<br>
+You can learn to write unit test using soda-test pacakge by going over soda-test documenation or the soda-test videos.<br>
+Write your unit-tests using typescript, with classes, decorators and promises.<br>
+Use the "spies" and "stubs" of the sinon pacakges, but with soda-test easy to use syntax.
+No need to worry about cleanups, soda-test pacakge do this for you.<br>
+Your tests are defined as functions in a class, and not as endless nested call-backs.<br>
+When writing unit-tests you may encounter the need to access or stub private or hidden function, stub middleware, avoid your code from accessing external packages that may access the web or databases.
+Doing that and other cases, with the traditional test packages, may be very difficult, it possible at all.
+Soda-test solves those issues the easy way, in some cases with you even knowing about those difficulties, and without the need to change your product code.<br> 
+The syntax of unit test code with soda-test is easy to write and easy to understand.<br>
+Soda-test supports unit-test for frontend as well as for backend, with the same syntax.<br>  
+Furthermore, soda-test gives you a framework for writing your API test.
 </p>
 
 <br><br>
