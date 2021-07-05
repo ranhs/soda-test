@@ -444,6 +444,7 @@ export interface Rewire {
     lib(): Record<string,unknown>
     isRewired(): boolean
     get(name: string): never
+    safeget(name: string): never
     set(name: string, value: unknown): void
     restore(): void
 }
@@ -465,13 +466,22 @@ class LibRewire implements Rewire {
         return this._isRewired
     }
 
-    get(name: string): never {
+    get(name: string): never { 
         if ( this._err ) throw this._err
         if (this._isRewired) {
             const v: never = (this._lib["__get__"] as (name: string) => never)(name)
             return v
         }
         return this._lib[name] as never
+    }
+
+    safeget(name: string): never {
+        if ( this._err ) throw this._err
+        try {
+            return this.get(name)
+        } catch {
+            return undefined as never
+        }
     }
 
     private setLibValue(name: string, value: unknown): void {

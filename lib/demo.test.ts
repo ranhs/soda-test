@@ -1,6 +1,6 @@
 import { expect, describe, context, it, TR, PTR, spy, SinonSpy, SinonStub, stub, Done } from '.'
 
-import { add, addCallbck, addPromise, foo, bar, dividePromise } from './demo'
+import { add, addCallbck, addPromise, foo, bar, dividePromise, callDefualt } from './demo'
 
 
 @describe('demo')
@@ -98,5 +98,15 @@ class TestDemoTest {
         expect(callDbStub).to.have.been.calledOnce
     }
 
+@context('callDefault')
+
+    @stub('./methods')
+    theDefaultStub: SinonStub
+
+    @it('should call default method')
+    calllDefault1(): TR {
+        callDefualt()
+        expect(this.theDefaultStub).to.have.been.calledOnce
+    }
 }
 

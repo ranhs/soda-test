@@ -1,3 +1,5 @@
+import theDefault from './methods'
+
 export function add(a: number, b: number): number {
     return a + b
 }
@@ -59,4 +61,9 @@ export async function bar(filename: string): Promise<string> {
     await createFile(filename)
     const result = await callDB(filename)
     return result
+}
+
+
+export function callDefualt(): void {
+    theDefault()   
 }

@@ -187,7 +187,7 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
     if ( !sinonInfo.memberMethod ) {
         // not having 'memberMethod' means we need to spy/stub the method itself
         // orgMethod2: the method of the libraray before spying/stubbing
-        const orgMethod2: sinonMethod = rewire.get(targetMethodName)
+        const orgMethod2: sinonMethod = rewire.safeget(targetMethodName)
         if ( orgMethod2 ) {
             // the method to spy/stub exists in the libraray
             // orgMethod2: the method of the export object of the libraray (usally the same as orgMethod2)
@@ -215,13 +215,13 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
                 if ( restore ) restore()
             }
             return sinon 
-        } 
-        // trying to spy/stub a method that does not exist on the libraray
-        return undefined //not supported sinon
+        } else {
+            return bindSinon(target, targetMethodName)
+        }
     }
     // need to spy/stub a class method
     // class2stub: the class where the 'memberMethod' to spy/stub exists on
-    const class2stub: sinonMethod = rewire.get(targetMethodName)
+    const class2stub: sinonMethod = rewire.safeget(targetMethodName)
     if ( class2stub ) {
         const prototype = class2stub.prototype
         if ( prototype ) {
