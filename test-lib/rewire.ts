@@ -402,10 +402,10 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
             targetBasePath + ".ts",
             join(targetBasePath, "index.ts")
         ]
-
-
+        
+        
         if ( webpackIndex < 0 ) {
-                // requireing the raget library to make sure it is in cache 
+            // requireing the raget library to make sure it is in cache 
             // (if it is already loaded, this will not have an effent)
             require(targetBasePath)
         }
@@ -485,32 +485,13 @@ class LibRewire implements Rewire {
     }
 
     private setLibValue(name: string, value: unknown): void {
-        // check if we can change the property
-        const desc = Object.getOwnPropertyDescriptor(this._lib, name)
-        if ( desc && desc.get && !desc.set ) {
-            // to change this value, we need to redefine its proeprty descriptor
-            // first we need to save its current descriptor (unless we want to restore it)
-            let orgDescriptors = this._lib["__orgDescriptors__"] as Record<string,PropertyDescriptor>
-            if ( orgDescriptors === undefined ) {
-                this._lib["__orgDescriptors__"] = orgDescriptors = {}
-            }
-            if ( orgDescriptors["name"] && orgDescriptors["name"].get && orgDescriptors["name"].get == value) {
-                // need to restore the original descriptor
-                Object.defineProperty(this._lib, name, orgDescriptors["name"])
-                delete orgDescriptors["name"]
-                return
-            }
-            // save the current descriptor
-            orgDescriptors["name"] = desc
-            // redefine the descriptor
-            Object.defineProperty(this._lib, name, {...desc, get: ()=>value})
-            return
+        let restores = this._lib["__restores__"] as Record<string, ()=>void>
+        if ( restores === undefined ) {
+            this._lib["__restores__"] = restores = {}
         }
-        // this property can be set, just do it
-        if ( value === undefined ) {
-            delete this._lib[name]
-        } else {
-            this._lib[name] = value
+        const restore = setProperty(this._lib, name, value)
+        if ( Object.keys(restores).indexOf(name) < 0 ) {
+            restores[name] = restore
         }
     }
 
@@ -530,22 +511,27 @@ class LibRewire implements Rewire {
                 this.setLibValue(name, value)
             }
         } else {
-            const prevValue = this._lib[name]
-            if ( Object.keys(orgValues).indexOf(name) < 0 ) {
-                orgValues[name] = prevValue
-            }
             this.setLibValue(name, value)
         }
     }
 
     restore(): void {
         if ( this._err ) throw this._err
-        const orgValues = this._lib["__org__"] as Record<string,unknown>
-        if ( orgValues === undefined ) return
-        for (const key of Object.keys(orgValues)) {
-            this.set(key, orgValues[key])
+        if ( this._isRewired ) {
+            const orgValues = this._lib["__org__"] as Record<string,unknown>
+            if ( orgValues !== undefined ) {
+                for (const key of Object.keys(orgValues)) {
+                    (this._lib["__set__"] as (name: string, value: unknown) => void)(key, orgValues[key])
+                }
+                delete this._lib["__org__"]
+            }
         }
-        delete this._lib["__org__"]
+        const restores = this._lib["__restores__"]
+        if ( restores !== undefined ) {
+            for (const key of Object.keys(restores)) {
+                restores[key]()
+            }
+        }
     }
 }
 
