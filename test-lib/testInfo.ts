@@ -96,8 +96,6 @@ export class DescribeInfo {
     uncontext: ContextInfo = new ContextInfo('')
 
     sandboxes: string[] = []
-    localRewires: Rewire[] = []
-    globalRewires: Rewire[] = []
 
     sinons: {[memberName: string]: SinonInfo} = {}
     lastSinon: {name: string, sinon: SinonInfo} = null
