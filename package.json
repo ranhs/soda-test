@@ -10,7 +10,8 @@
     "tsc": "tsc -d && cpx index.d.ts dist && cpx lib/plan/testPlan2.test.ts dist/lib/plan",
     "buildall": "npm run tsc && npm run test",
     "lint": "eslint --ignore-path .gitignore **/*.ts",
-    "soda-plan": "node ./plan \"dist/lib/**/*.test.js\" testPlan.json"
+    "soda-plan": "node ./plan \"dist/lib/**/*.test.js\" testPlan.json",
+    "postinstall": "npm uninstall util & npm i util-0.12.4.patch.tgz"
   },
   "keywords": [
     "soda",
@@ -53,21 +54,24 @@
   "private": false,
   "builders": "builders.json",
   "dependencies": {
-    "@angular-devkit/build-angular": "^0.1102.3",
+    "@angular-devkit/build-angular": "^12.1.1",
     "@types/chai": "^4.2.11",
     "@types/chai-as-promised": "^7.1.2",
-    "@types/sinon": "^9.0.4",
-    "@types/sinon-chai": "^3.2.4",
+    "@types/sinon": "^10.0.2",
+    "@types/sinon-chai": "^3.2.5",
     "@types/supertest": "^2.0.9",
+    "assert": "^2.0.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "glob": "^7.1.6",
     "mocha": "^7.2.0",
+    "path-browserify": "^1.0.1",
     "reflect-metadata": "^0.1.13",
-    "sinon": "^9.0.2",
-    "sinon-chai": "^3.5.0",
+    "sinon": "^11.1.1",
+    "sinon-chai": "^3.7.0",
     "supertest": "^4.0.2",
-    "ts-import": "^2.0.39"
+    "ts-import": "^2.0.39",
+    "util": "file:util-0.12.4.patch.tgz"
   },
   "devDependencies": {
     "@types/argv": "0.0.4",
@@ -93,8 +97,10 @@
     "dist/test-lib",
     "dist/build-angular",
     "dist/index.*",
+    "path.js",
     "jest.js",
     "builders.json",
-    "plan.js"
+    "plan.js",
+    "util-0.12.4.patch.tgz"
   ]
 }

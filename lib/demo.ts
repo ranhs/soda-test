@@ -4,7 +4,7 @@ export function add(a: number, b: number): number {
     return a + b
 }
 
-export function addCallbck(a: number, b: number, callback: (err: Error, result: number) => void): void {
+export function addCallbck(a: number, b: number, callback: (err: Error | null, result: number) => void): void {
     setTimeout(() => {
         return callback(null, a+b)
     }, 500)

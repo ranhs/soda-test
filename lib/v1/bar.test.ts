@@ -1,4 +1,4 @@
-import { it, TR, describe, context, assert, before, after, beforeEach, afterEach, pending } from '..'
+import { it, TR, describe, context, assert, before, after, beforeEach, afterEach, pending, environment } from '..'
 
 @describe("files to tested")
 class DescribeClassTest {
@@ -24,9 +24,9 @@ class DescribeClassTest {
     @it("should test something")
     test1(): TR {
         assert.equal(1,1)
-        console.log("ENV:", process.env.NODE_ENV)
+        console.log("ENV:", environment.NODE_ENV)
 
-        if ( process.env.NODE_ENV === "development" ) {
+        if ( environment.NODE_ENV === "development" ) {
             console.log('This is development mode')
         }
     }

@@ -1,10 +1,11 @@
 import { describe, context, it, comment, expect, spy, SinonSpy, testStep, testCase, stepMethod } from '..'
 import { copyFileSync, unlinkSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { join } from '../../path'
 import { testPlan as testPlanRef, testPlan2 as testPlanRef2 } from './testplan.data'
-process.env.SKIP_CREATE_TESTPLAN = "YES"
+import { environment } from '../../test-lib'
+environment.SKIP_CREATE_TESTPLAN = "YES"
 import { createTestPlan } from '../../plan'
-delete process.env.SKIP_CREATE_TESTPLAN
+delete environment.SKIP_CREATE_TESTPLAN
 
 
 @describe('TestPlan1', {description: 'Test the ability to create a test plan'})

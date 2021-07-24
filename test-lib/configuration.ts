@@ -1,4 +1,5 @@
-import { join, sep } from 'path'
+import { environment } from './environment'
+import { join, sep } from '../path'
 
 
 export interface RewireConfiguration {
@@ -96,7 +97,7 @@ ${JSON.stringify(config,null,2)}
 export function initConfiguration(config: SodaTestConfiguration):  void {
     for ( const key in config.env ) {
         const value = config.env[key]
-        process.env[key] = value
+        environment[key] = value
     }
 }
 

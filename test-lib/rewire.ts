@@ -1,8 +1,9 @@
-import { dirname, join, sep} from 'path'
+import { dirname, join, sep} from './path'
 import { anyFunction } from './executables'
 import * as tslib from 'tslib'
 import { setProperty } from './setProperty'
 import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir, SodaTestConfiguration, RewireConfiguration } from './configuration'
+import { isProcessAvailable } from './environment'
 
 const excluded_libs = [
     'soda-test',
@@ -10,6 +11,8 @@ const excluded_libs = [
     'get-intrinsic',
     'call-bind'
 ]
+
+export let isKarma = false
 
 let fs: unknown
 let nodeJsInputFileSystem: unknown
@@ -117,14 +120,23 @@ ${mapCode}`
         }
 
     } else if ( filename.endsWith('.ts') ) {
-        if ( light ) {
+        if ( light ) { require.cache
             content = `${content}
-Object['__rewireCurrent'] && Object['__rewireCurrent'](require['cache'][module.id] || module, (exp,value)=>eval(exp), true, null)
+
+const __rewireCurrent = eval('Object.__rewireCurrent')
+let _module: unknown = undefined
+try { _module = eval('require.cache[module.id]') } catch {}
+try { _module = _module || eval('module') } catch {}
+__rewireCurrent && __rewireCurrent( _module, (exp: string,value: unknown)=>eval(exp), true, null)
 ${varsDefinitions(fileConfiguration)}`
         } else {
-            content = `function __load(module,exports) {} ${content}
+            content = `function __load(module: unknown,exports: unknown) {} ${content}
 
-Object['__rewireCurrent'] && Object['__rewireCurrent'](require['cache'][module.id] || module, (exp,value)=>eval(exp), false, __load)
+const __rewireCurrent = eval('Object.__rewireCurrent')
+let _module: unknown = undefined
+try { _module = eval('require.cache[module.id]') } catch {}
+try { _module = _module || eval('module') } catch {}
+__rewireCurrent && __rewireCurrent( _module, (exp: string,value: unknown)=>eval(exp), false, __load)
 ${varsDefinitions(fileConfiguration)}
 //}
 //__load(module,exports)`            
@@ -170,7 +182,8 @@ function stubImportStar(): void {
     setProperty(tslib, '__importStar', _importStarHook)
 }
 
-export async function init(isKarma = false): Promise<void> {
+export async function init(isKarmaParam = false): Promise<void> {
+    isKarma = isKarmaParam
     stubImportStar()
     if ( isKarma ) {
         for (const key of Object.keys(require.cache)) {
@@ -230,6 +243,7 @@ export async function init(isKarma = false): Promise<void> {
     init['_defineProperty'] = _defineProperty // for testing
     if ( _defineProperty['_hooked'] !== 'soda-test' ) {
         Object.defineProperty = (o: never, p: PropertyKey, attributes: PropertyDescriptor) => {
+            if ( !Object.isExtensible(o) ) return
             const desc = Object.getOwnPropertyDescriptor(o,p)
             if ( desc && !desc.configurable ) {
                 return _defineProperty(o, p, attributes)
@@ -245,6 +259,8 @@ export async function init(isKarma = false): Promise<void> {
         if ( !obj.toString().startsWith('function') ) return false
         // not handing native code
         if ( obj.toString().indexOf('[native code]')>=0 ) return false
+        // if the function does not have a prototype it cannot be a calss, it is a function
+        if ( !obj.prototype ) return true
         // if the function prototype has properites (beside 'constructor') is must be a class
         if ( Object.getOwnPropertyNames(obj.prototype).length > 1 ) return false
         // if it derives from something that is not Object, it must be a class
@@ -288,7 +304,9 @@ export async function init(isKarma = false): Promise<void> {
         // rewire prototypes
         const _orgPrototype = Object.getPrototypeOf(func)
         Object.setPrototypeOf(aggregateFunction, _orgPrototype)
-        Object.setPrototypeOf(func, aggregateFunction)
+        if ( Object.isExtensible(func) ) {
+            Object.setPrototypeOf(func, aggregateFunction)
+        }
 
         // save the original method
         Object.defineProperty(aggregateFunction, '__org_func__', {
@@ -402,10 +420,10 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
             targetBasePath + ".ts",
             join(targetBasePath, "index.ts")
         ]
-        
-        
+
+
         if ( webpackIndex < 0 ) {
-            // requireing the raget library to make sure it is in cache 
+                // requireing the raget library to make sure it is in cache 
             // (if it is already loaded, this will not have an effent)
             require(targetBasePath)
         }
@@ -596,3 +614,4 @@ export function createAggregation(libname: string, methodName: string): Aggregat
 
     return aggregate
 }
+

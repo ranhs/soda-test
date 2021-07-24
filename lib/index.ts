@@ -29,7 +29,8 @@ export {
     request,
     global,
     useFakeTimers,
-    sandbox
+    sandbox,
+    environment
 } from '../test-lib'
 
 export {

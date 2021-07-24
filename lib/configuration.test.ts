@@ -1,9 +1,10 @@
 // unit test for the configuration file features
 import { describe, context, expect, it, stub, spy, rewire, SinonStub, SinonSpy, TR, Rewire } from '.'
-import { join } from 'path'
+import { join } from '../path'
 
 import { readConfiguration, initConfiguration } from '../test-lib/configuration'
 import * as configuration from '../test-lib/configuration'
+import { environment } from '../test-lib'
 
 const emptyConfiguration: configuration.SodaTestConfiguration = {
     env: {},
@@ -26,7 +27,7 @@ class ConfigurationTest {
 
     @it('should have the enviroment from the "real" config file')
     getTheEnvironemnet() {
-        expect(process.env.SODAENV).to.equal('GOOD')
+        expect(environment.SODAENV).to.equal('GOOD')
     }
 
 @context('readConfiguration')
@@ -117,11 +118,11 @@ class ConfigurationTest {
             },
             rewire: {files: {}}
         })
-        expect(process.env.__dummy1).to.equal('AA')
-        expect(process.env.__dummy2).to.equal('BB')
+        expect(environment.__dummy1).to.equal('AA')
+        expect(environment.__dummy2).to.equal('BB')
         //cleanup
-        delete process.env.__dummy1
-        delete process.env.__dummy2
+        delete environment.__dummy1
+        delete environment.__dummy2
     }
 
 @context('insertVars')

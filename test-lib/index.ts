@@ -2,10 +2,10 @@ import "reflect-metadata"
 
 import { SinonKind, SetStubType, SinonInfo, getInfo, extraInfo } from "./testInfo"
 import { TestDescribe, targetType, anyFunction } from "./executables";
-import { getCallerFileName, init as rewireInit } from "./rewire"
+import { getCallerFileName, init as rewireInit, isKarma } from "./rewire"
 export { Rewire, createAggregation } from "./rewire"
 import * as _assert from "assert"
-import * as _request from 'supertest'
+import { SuperTest, Test } from 'supertest'
 import * as chai from "chai"
 
 import * as chaiAsPromised from 'chai-as-promised'
@@ -16,9 +16,19 @@ import { createSinon } from "./sinons";
 import testSuite from './testSuite'
 import { isFunction, isString } from "util";
 import { PlanDescribe } from "./testplan";
+import {environment as _env} from './environment'
+export const environment = _env
 // to make the types of chai-aspromised and sinon-chai loaded
 export {} from 'chai-as-promised'
 export {} from 'sinon-chai'
+
+
+let _request: (app)=> SuperTest<Test> 
+
+const superLib = 'supertest'
+if ( !isKarma ) {
+    _request = require(superLib)
+}
 
 export const assert = _assert
 export const request = _request
@@ -109,7 +119,7 @@ export function describe(text: string, extraData?: extraInfo): classDecorator {
         info.describeText = text
         if (extraData) info.extraData = extraData
         const describeBlock = new TestDescribe(text, info, constructor as never)
-        if ( process.env.PLAN_MODE) {
+        if ( environment.PLAN_MODE) {
             PlanDescribe(info)
         } else {
             describeBlock.execute()

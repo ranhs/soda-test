@@ -1,7 +1,8 @@
 import * as glob from 'glob'
 const fs = require('fs') // eslint-disable-line @typescript-eslint/no-var-requires
+import { environment } from './test-lib'
 import { GetPlan, PlanReset } from './test-lib/testplan'
- import { Compiler } from 'ts-import'
+import { Compiler } from 'ts-import'
 
 const compiler = new Compiler({
     compilerOptions: {
@@ -30,7 +31,7 @@ export async function createTestPlan(argv: string[]): Promise<void> {
         console.error('Invalid script command')
         return
     }
-    process.env.PLAN_MODE = 'YES'
+    environment.PLAN_MODE = 'YES'
     const filesPattern = argv[2]
     const matches = await new Promise<string[]>((resolve,reject) => glob(filesPattern, {absolute: true}, (err, matches) => (err)?reject(err):resolve(matches)))
     PlanReset()
@@ -51,6 +52,6 @@ export async function createTestPlan(argv: string[]): Promise<void> {
     fs.writeFileSync(argv[3], JSON.stringify(testplan,null,2))
 }
 
-if ( !process.env.SKIP_CREATE_TESTPLAN ) {
+if ( !environment.SKIP_CREATE_TESTPLAN ) {
     createTestPlan(process.argv)
 }

@@ -60,7 +60,8 @@ if ( jest_ ) {
         assert: testLib.assert,
         sandbox: testLib.sandbox,
         testStep,
-        testCase
+        testCase,
+        environment: testLib.environment
     })
 } else {
     mergeInfo( exports, {
@@ -87,6 +88,7 @@ if ( jest_ ) {
         request: testLib.request,
         sandbox: testLib.sandbox,
         testStep,
-        testCase
+        testCase,
+        environment: testLib.environment
     })
 }

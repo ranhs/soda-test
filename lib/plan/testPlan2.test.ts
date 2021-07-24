@@ -1,8 +1,10 @@
 //import { describe, context, it, TR, expect, comment } from 'soda-test'
 /*********************** Import soda-test from inside soda-test **************** */
 import { TR } from '..'
-import {sep} from 'path'
-const i = __dirname.indexOf(`${sep}soda-test${sep}`)
+let i = __dirname.indexOf('/soda-test/')
+if ( i < 0 ) {
+    i = __dirname.indexOf('\\soda-test\\')
+}
 let sodalib = 'soda-test'
 if ( i > 0 ) {
     sodalib = __dirname.substr(0,i+sodalib.length+2) + 'dist'
