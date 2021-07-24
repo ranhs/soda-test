@@ -423,13 +423,6 @@ export class TestDescribe extends ExecutableBase {
                     this[sinonName] = createSinon(info.sinons[sinonName], initMethods[sinonContext]['_sinons']);
                     initMethods[sinonContext]['_sinons'] = initMethods[sinonContext]['_sinons'] || {}
                     initMethods[sinonContext]['_sinons'][sinonName] = this[sinonName]
-                    if ( info.sinons[sinonName].kind === SinonKind.Rewire ) {
-                        if ( info.sinons[sinonName].global ) {
-                            info.globalRewires.push(this[sinonName])    
-                        } else {
-                            info.localRewires.push(this[sinonName])
-                        }
-                    }
                 }
             })
             rapupMethods[sinonContext].push( {
@@ -475,22 +468,6 @@ export class TestDescribe extends ExecutableBase {
                     describeControlMethods.afterEachInner.push(func)
                 }
             }
-            describeControlMethods.afterEachInner = describeControlMethods.afterEachInner || []
-            describeControlMethods.afterEachInner.push( function() {
-                // restore rewires
-                for ( const rewire of info.localRewires ) {
-                    rewire.restore()
-                }
-                info.localRewires = []
-            })
-            describeControlMethods.afterInner = describeControlMethods.afterInner || []
-            describeControlMethods.afterInner.push( function() {
-                // restore rewires
-                for ( const rewire of info.globalRewires ) {
-                    rewire.restore()
-                }
-                info.globalRewires = []
-            })
         }
     }
 
