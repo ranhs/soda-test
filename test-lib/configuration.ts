@@ -76,7 +76,11 @@ function readConfigurationInternal(fs: unknown): SodaTestConfiguration {
 }
 
 export function readConfiguration(fs: unknown): SodaTestConfiguration {
-    return fillMissingConfiguration(readConfigurationInternal(fs))
+    let config: SodaTestConfiguration = undefined
+    if ( fs ) {
+        config = readConfigurationInternal(fs)
+    }
+    return fillMissingConfiguration(config)
 }
 
 export function readConfigurationFileName(): string {

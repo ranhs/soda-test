@@ -27,7 +27,12 @@ let _request: (app)=> SuperTest<Test>
 
 const superLib = 'supertest'
 if ( !isKarma ) {
-    _request = require(superLib)
+    try {
+        _request = require(superLib)
+    }
+    catch {
+        _request = undefined
+    }
 }
 
 export const assert = _assert

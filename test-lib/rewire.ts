@@ -25,6 +25,14 @@ try {
 const _init_configuration = (fs)?readConfiguration(fs):null
 const _readconfiguration_filename = (fs)?readConfigurationFileName():null
 
+interface Loadable {
+    __reload__(module: NodeModule, exports: Record<string,unknown>): boolean
+}
+
+interface AnExportObject extends Loadable, Record<string, unknown> {
+}
+
+const exportsCache: {[filename: string]: AnExportObject} = {}
 try {
     childProcess = require('child_process')
 } catch (err) {
@@ -104,45 +112,26 @@ function PatchFileContent(fileContent: string | Buffer, filename: string): strin
             mapCode = content.substr(i+1)
             content = content.substr(0, i)
         }
-        if ( light ) {
-            content = `${content}
-Object.__rewireCurrent && Object.__rewireCurrent(require['cache'][module.id] || module, (exp,value)=>eval(exp), true, null)
-${varsDefinitions(fileConfiguration)}${mapCode}`
-        } else {
-            content = `function __load(module,exports) {${content}
 
-Object.__rewireCurrent && Object.__rewireCurrent(require['cache'][module.id] || module, (exp,value)=>eval(exp), false, __load)
-${varsDefinitions(fileConfiguration)}
-return true
+        content = `${(light)?'':'function __load(module,exports) {'}${content}
+const ___filename = ${JSON.stringify(normalizeFilename(filename))}
+Object.__rewireCurrent && Object.__rewireCurrent((exp,value)=>eval(exp),${light})
+${varsDefinitions(fileConfiguration)}${mapCode}${(light)?'':`
+return true;
 }
-__load(module,exports)
-${mapCode}`
-        }
-
+__load(module,exports);`}`
     } else if ( filename.endsWith('.ts') ) {
-        if ( light ) { require.cache
-            content = `${content}
 
+        content = `${(light)?'':'function __load(module: NodeModule, exports: Record<string, unknown>) {};'}${content}
+const ___filename = ${JSON.stringify(normalizeFilename(filename))}
 const __rewireCurrent = eval('Object.__rewireCurrent')
-let _module: unknown = undefined
-try { _module = eval('require.cache[module.id]') } catch {}
-try { _module = _module || eval('module') } catch {}
-__rewireCurrent && __rewireCurrent( _module, (exp: string,value: unknown)=>eval(exp), true, null)
-${varsDefinitions(fileConfiguration)}`
-        } else {
-            content = `function __load(module: unknown,exports: unknown) {} ${content}
+__rewireCurrent && __rewireCurrent((exp: string, value: unknown): unknown => eval(exp),${light})
+${varsDefinitions(fileConfiguration)}${(light)?'':`
 
-const __rewireCurrent = eval('Object.__rewireCurrent')
-let _module: unknown = undefined
-try { _module = eval('require.cache[module.id]') } catch {}
-try { _module = _module || eval('module') } catch {}
-__rewireCurrent && __rewireCurrent( _module, (exp: string,value: unknown)=>eval(exp), false, __load)
-${varsDefinitions(fileConfiguration)}
 //}
-//__load(module,exports)`            
-        }
+//__load(module,exports)`}`
     }
-
+    
     // turn content back to buffer if need to
     if ( isBuffer ) {
         fileContent = new Buffer(content)
@@ -150,6 +139,15 @@ ${varsDefinitions(fileConfiguration)}
         fileContent = content
     }
 return fileContent
+}
+
+function normalizeFilename(filename: string): string {
+    if (filename.startsWith(basePath)) {
+        filename = filename.substr(basePath.length)
+    }
+    filename = filename.replace(/\\/g,'/')
+    if ( !filename.startsWith('/') ) filename = `/${filename}`
+    return filename
 }
 
 // this method is called each time fs.readyFileSync is called
@@ -327,7 +325,24 @@ export async function init(isKarmaParam = false): Promise<void> {
         return aggregateFunction
     }
 
-    Object['__rewireCurrent'] = function(_module: NodeModule, _eval: (exp: string, value: unknown) => unknown, light: boolean, __load?: (module: NodeModule, exports: unknown) => void) {
+    Object['__rewireCurrent'] = function( _eval: (exp: string, value: unknown) => unknown, light: boolean) {
+        function _get(exp: string): unknown {
+            try {
+                return _eval(exp, null)
+            } catch {
+                return undefined
+            }
+        }
+        let _module: NodeModule = _get('module') as never
+        if ( !_module ) {
+            _module = _get('__unused_webpack_module') as never
+        }
+        if ( !_module ) {
+            return
+        }
+        let __load: (module: NodeModule, exports: Record<string,unknown>) => boolean = undefined
+        if ( !light ) __load = _get('__load') as never
+        const ___filename: string = _get('___filename') as never
         if ( !light ) {
             _module.exports.__set__ = function(name: string, value: unknown) {
                 _eval(`${name} = value`, value)
@@ -337,14 +352,16 @@ export async function init(isKarmaParam = false): Promise<void> {
             }
             _module.exports.__reload__ = __load
         }
+        Object.defineProperty(_module.exports, '___filename', { value: ___filename, writable: false} )
         if ( isNonClassFunction(_module.exports) ) {
             _module.exports = _aggregateFunction(_module.exports)
         }
+        exportsCache[___filename] = _module.exports
     }
     let config: SodaTestConfiguration = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
-    if ( config.placeholder && fs) {
+    if ( config.placeholder) {
         config = readConfiguration(fs)
-    }
+    } 
     initConfiguration(config)
     rewire_config = rewireConfiguration(config)
 }
@@ -387,24 +404,27 @@ function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration
     return rewireConfiguration
 }
 
-function getTargetBasePath(caller: string, libname: string):{targetBasePath: string, webpackIndex: number} {
+function getTargetBasePath(caller: string, libname: string):{targetBasePath: string, fullPath?: string} {
     const callerDirName = dirname(caller)
-    let targetBasePath = join(callerDirName, libname)
+    const fullPath = join(callerDirName, libname)
+    let targetBasePath: string
     // check if we are in webPack
     const wpStrings = ['/_karma_webpack_/webpack:/', '/_karma_webpack_/', '/webpack:/']
     let webpackIndex: number
     let len: number
     for (const wpString of wpStrings ) {
-        webpackIndex = targetBasePath.indexOf(wpString)
+        webpackIndex = fullPath.indexOf(wpString)
         if ( webpackIndex > 0 ) {
             len = wpString.length
             break
         }
     }
     if ( webpackIndex>0 ) {
-        targetBasePath = './' + targetBasePath.substr(webpackIndex+len)
-    } 
-    return {targetBasePath, webpackIndex}
+        targetBasePath = '/' + fullPath.substr(webpackIndex+len)
+    } else {
+        targetBasePath = normalizeFilename(fullPath)
+    }
+    return {targetBasePath, fullPath: (webpackIndex>0)?undefined:fullPath}
 }
 
 // this method returns teh exports of a libraray (just like require)
@@ -412,7 +432,8 @@ function getTargetBasePath(caller: string, libname: string):{targetBasePath: str
 // can be used from other libraries. the result exports might be rewried
 export function getLibFromPath(libname: string, caller: string, reload = false): Record<string,unknown> {
     if (libname.startsWith('.')) {
-        const {targetBasePath, webpackIndex} = getTargetBasePath(caller, libname)
+        const {targetBasePath, fullPath} = getTargetBasePath(caller, libname)
+        console.log('getLibFromPath', libname, caller, targetBasePath)
         const targetPossiblePaths: string[] = [ 
             targetBasePath, 
             targetBasePath + ".js", 
@@ -422,17 +443,17 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
         ]
 
 
-        if ( webpackIndex < 0 ) {
+        if ( fullPath ) {
                 // requireing the raget library to make sure it is in cache 
             // (if it is already loaded, this will not have an effent)
-            require(targetBasePath)
+            require(fullPath)
         }
         for ( const path of targetPossiblePaths ) {
-            if ( require.cache[path] ) {
-                const _exports = require.cache[path].exports
+            if ( exportsCache[path] ) {
+                const _exports = exportsCache[path]
                 if ( reload ) {
-                    const _module: {exports: {[key:string]:unknown}} = {exports: {}}
-                    if ( undefined === _exports.__reload__(_module,_module.exports) ) {
+                    const _module: {exports: Record<string,unknown>} = {exports: {}}
+                    if ( !_exports.__reload__(_module as NodeModule,_module.exports) ) {
                         throw new Error(`reloading module is not supported for ${libname}`)
                     }
                     return _module.exports
@@ -440,6 +461,27 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
                 return _exports
             }
         }
+        // console.log('could not find libraray')
+        // console.log(libname)
+        // console.log(targetBasePath)
+        // if ( libname.startsWith('.') ) {
+        //     const targetPath = join(dirname(caller),libname)
+        //     const mypath = dirname(getCallerFileName(1))
+        //     console.log('targetPath', targetPath)
+        //     console.log('mypath', mypath, targetPath.startsWith(mypath))
+        //     let mypath1 = mypath
+        //     let relativePath = '.'
+        //     while ( !targetPath.startsWith(mypath1) ) {
+        //         relativePath = join(relativePath, '..')
+        //         mypath1 = join(mypath1,'..')
+        //         console.log('myPath1', mypath1, relativePath)
+        //     }
+        //     relativePath = join(relativePath, targetPath.substr(mypath1.length+1))
+        //     console.log('relativePath', relativePath)
+        //     for ( const key in require.cache ) {
+        //         console.log(require.cache[key].id, require.cache[key].loaded, ...Object.keys(require.cache[key].exports))
+        //     }
+        // }
         throw new Error(`could not find libraray ${libname}`)
     }
     // node_modles lib, just return it
