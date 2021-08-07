@@ -124,13 +124,13 @@ class ExpectTest {
 
     @it('should expect and done')
     expectWithDone(done: Done): TR {
-        let timeout: NodeJS.Timeout = null
+        let timeout: NodeJS.Timeout
         setTimeout( () => {
             try {
                 expect(true).to.be.true
                 expect(1).to.equal(2)
                 clearInterval(timeout)
-                timeout = null
+                timeout = null as never
                 //done() // should not get here
                 fail('should not get here')
             } catch (e) {
