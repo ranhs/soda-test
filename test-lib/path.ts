@@ -1,4 +1,9 @@
-let path: unknown
+interface PathMethods {
+    dirname(p: string): string
+    join(...paths: string[]): string
+    get sep(): string
+}
+let path: PathMethods
 
 try {
     path = require('path')
@@ -7,11 +12,11 @@ try {
 }
 
 export function dirname(p: string): string {
-    return path['dirname'](p)
+    return path.dirname(p)
 }
 
 export function join(...paths: string[]): string {
-    return path['join'](...paths)
+    return path.join(...paths)
 }
 
-export const sep = path['sep'] as string
+export const sep = path.sep

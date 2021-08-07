@@ -1,5 +1,6 @@
 // unit test for the configuration file features
 import { describe, context, expect, it, stub, spy, rewire, SinonStub, SinonSpy, TR, Rewire } from '.'
+import { secret } from './config'
 import { join } from '../path'
 
 import { readConfiguration, initConfiguration } from '../test-lib/configuration'
@@ -155,5 +156,11 @@ class ConfigurationTest {
         expect(error).to.exist.to.have.property('message', 'klay is not defined')
     }
 
+@context('secret')
+    @it('should return the secret')
+    secret1(): TR {
+        const s = secret()
+        expect(s).to.equal('secrete')
+    }
 
 }

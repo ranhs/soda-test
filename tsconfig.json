@@ -7,6 +7,7 @@
         "skipLibCheck": true,
         "allowJs": false,
         "experimentalDecorators": true,
+        "strictPropertyInitialization": false,
         "outDir": "./dist"
     },
     "exclude": [

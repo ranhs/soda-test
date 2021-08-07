@@ -3,7 +3,6 @@ import { anyFunction } from './executables'
 import * as tslib from 'tslib'
 import { setProperty } from './setProperty'
 import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir, SodaTestConfiguration, RewireConfiguration } from './configuration'
-import { isProcessAvailable } from './environment'
 
 const excluded_libs = [
     'soda-test',
@@ -104,6 +103,7 @@ function PatchFileContent(fileContent: string | Buffer, filename: string): strin
         content = fileContent as string
     }
     const light = filename.indexOf('node_modules') >=0
+    const ___filename = normalizeFilename(filename)
     if ( filename.endsWith('.js') ) {
         // move the map code after the new code
         const i = content.lastIndexOf('\n')
@@ -114,8 +114,7 @@ function PatchFileContent(fileContent: string | Buffer, filename: string): strin
         }
 
         content = `${(light)?'':'function __load(module,exports) {'}${content}
-const ___filename = ${JSON.stringify(normalizeFilename(filename))}
-Object.__rewireCurrent && Object.__rewireCurrent((exp,value)=>eval(exp),${light})
+Object.__rewireCurrent && Object.__rewireCurrent((exp,value)=>eval(exp),${light},${JSON.stringify(___filename)})
 ${varsDefinitions(fileConfiguration)}${mapCode}${(light)?'':`
 return true;
 }
@@ -123,9 +122,8 @@ __load(module,exports);`}`
     } else if ( filename.endsWith('.ts') ) {
 
         content = `${(light)?'':'function __load(module: NodeModule, exports: Record<string, unknown>) {};'}${content}
-const ___filename = ${JSON.stringify(normalizeFilename(filename))}
 const __rewireCurrent = eval('Object.__rewireCurrent')
-__rewireCurrent && __rewireCurrent((exp: string, value: unknown): unknown => eval(exp),${light})
+__rewireCurrent && __rewireCurrent((exp: string, value: unknown): unknown => eval(exp),${light},${JSON.stringify(___filename)})
 ${varsDefinitions(fileConfiguration)}${(light)?'':`
 
 //}
@@ -214,6 +212,26 @@ export async function init(isKarmaParam = false): Promise<void> {
                     return afterReadFileSync(filename, encoding, result) as string
                 }
                 _fs['readFileSync']['_hooked'] = 'soda-test'
+            }
+            const _readFile: (path: string, options: unknown, callback: (err: NodeJS.ErrnoException | null, data: Buffer) => void) => void = fs['readFile'] as never
+            if ( _readFile['_hooked'] === 'soda-test') {
+                // already hooked
+            } else {
+                _fs['readFile'] = function (path: string, options: unknown, callback: (err: NodeJS.ErrnoException | null, data: Buffer) => void): void {
+                    if ( !callback ) {
+                        callback = options as never // options was not specified
+                    }
+                    _readFile(path, options, (err, data) => {
+                        if ( !err ) {
+                            data = afterReadFileSync(path, null, data) as Buffer
+                            if ( path === 'node_modules/karma-source-map-support/lib/client.js' ) {
+                                console.log('patched file', path, '\n', data.toString())
+                            }
+                        }
+                        callback(err, data)
+                    })
+                }
+                _fs['readFile']['_hooked'] = 'soda-test'
             }
         }
         if ( childProcess ) {
@@ -325,7 +343,7 @@ export async function init(isKarmaParam = false): Promise<void> {
         return aggregateFunction
     }
 
-    Object['__rewireCurrent'] = function( _eval: (exp: string, value: unknown) => unknown, light: boolean) {
+    Object['__rewireCurrent'] = function( _eval: (exp: string, value: unknown) => unknown, light: boolean, ___filename: string) {
         function _get(exp: string): unknown {
             try {
                 return _eval(exp, null)
@@ -342,7 +360,6 @@ export async function init(isKarmaParam = false): Promise<void> {
         }
         let __load: (module: NodeModule, exports: Record<string,unknown>) => boolean = undefined
         if ( !light ) __load = _get('__load') as never
-        const ___filename: string = _get('___filename') as never
         if ( !light ) {
             _module.exports.__set__ = function(name: string, value: unknown) {
                 _eval(`${name} = value`, value)
@@ -433,7 +450,6 @@ function getTargetBasePath(caller: string, libname: string):{targetBasePath: str
 export function getLibFromPath(libname: string, caller: string, reload = false): Record<string,unknown> {
     if (libname.startsWith('.')) {
         const {targetBasePath, fullPath} = getTargetBasePath(caller, libname)
-        console.log('getLibFromPath', libname, caller, targetBasePath)
         const targetPossiblePaths: string[] = [ 
             targetBasePath, 
             targetBasePath + ".js", 
@@ -461,27 +477,6 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
                 return _exports
             }
         }
-        // console.log('could not find libraray')
-        // console.log(libname)
-        // console.log(targetBasePath)
-        // if ( libname.startsWith('.') ) {
-        //     const targetPath = join(dirname(caller),libname)
-        //     const mypath = dirname(getCallerFileName(1))
-        //     console.log('targetPath', targetPath)
-        //     console.log('mypath', mypath, targetPath.startsWith(mypath))
-        //     let mypath1 = mypath
-        //     let relativePath = '.'
-        //     while ( !targetPath.startsWith(mypath1) ) {
-        //         relativePath = join(relativePath, '..')
-        //         mypath1 = join(mypath1,'..')
-        //         console.log('myPath1', mypath1, relativePath)
-        //     }
-        //     relativePath = join(relativePath, targetPath.substr(mypath1.length+1))
-        //     console.log('relativePath', relativePath)
-        //     for ( const key in require.cache ) {
-        //         console.log(require.cache[key].id, require.cache[key].loaded, ...Object.keys(require.cache[key].exports))
-        //     }
-        // }
         throw new Error(`could not find libraray ${libname}`)
     }
     // node_modles lib, just return it

@@ -1,5 +1,5 @@
 let _env: {[key: string]: string} = undefined
-let _isProcessAvailable: boolean = true
+let _isProcessAvailable = true
 try {
     _env = process.env
 } catch {
