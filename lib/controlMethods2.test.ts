@@ -148,10 +148,34 @@ class CtrlMethods2Test {
 
 }
 
-@describe('controlMethods3')
-class ConsoleMethods3Test {
-    @it('should be after controlMethods2 after call')
+let afterMethodAExecuted = false
+let afterMethodAAfterExecuted = false
+let afterMethodBExecuted = false
+let afterMethodBAfterExecuted = false
+
+@describe('afterMethodA')
+class afterMethodATest {
+    after(): void {
+        afterMethodAAfterExecuted = true
+    }	
+
+    @it('should have called B after if B has executed')
     validateAfterWasCalled(): TR {
-        expect(AM).to.equal(1)
+        afterMethodAExecuted = true
+        expect(afterMethodBAfterExecuted).to.equal(afterMethodBExecuted )
     }
 }
+
+
+@describe('afterMethodB')
+class afterMethodBTest {
+    after(): void {
+        afterMethodBAfterExecuted = true
+    }	
+
+    @it('should have called A after if A has executed')
+    validateAfterWasCalled(): TR {
+       afterMethodBExecuted = true
+       expect(afterMethodAAfterExecuted).to.equal(afterMethodAExecuted)
+    }
+} 
