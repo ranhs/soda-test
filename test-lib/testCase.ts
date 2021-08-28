@@ -3,24 +3,9 @@ import { getInfo, CaseInfo, extraInfo, commentInfo } from "./testInfo"
 
 export type factoryMethod = () => unknown
 
-function createFactory( constructorMethod, args?: unknown[] ): factoryMethod {
-    if ( !args ) args = []
-    switch ( args.length ) {
-        case 0:
-            return (): unknown => new constructorMethod()
-        case 1:
-            return (): unknown => new constructorMethod(args[0])
-        case 2:
-            return (): unknown => new constructorMethod(args[0], args[1])
-        case 3:
-            return (): unknown => new constructorMethod(args[0], args[1], args[2])
-        case 4:
-            return (): unknown => new constructorMethod(args[0], args[1], args[2], args[3])
-        case 5:
-        default:
-            return (): unknown => new constructorMethod(args[0], args[1], args[2], args[3], args[4])
-            
-    }
+function createFactory( constructorMethod, args?: unknown[]): factoryMethod {
+    args = args || []
+    return (): unknown => new constructorMethod(...args)
 }
 
 
