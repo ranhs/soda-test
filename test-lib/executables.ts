@@ -4,7 +4,7 @@ import { SinonInfo, ControlMethods, ItInfo, DescribeInfo, CaseInfo, valFunction 
 import { createSinon } from './sinons'
 import { SinonSpy, SinonStub, Rewire } from '.'
 
-export type anyFunction = (...args: unknown[]) => unknown // eslint-disable-line @typescript-eslint/ban-types
+export type anyFunction = Function // eslint-disable-line @typescript-eslint/ban-types
 type constructorType = anyFunction
 
 let isJest = false

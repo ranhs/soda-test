@@ -151,8 +151,9 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
         }
         if ( target && targetMethodName ) {
             // we have a target object and a name of a method
-            if ( target[targetMethodName] ) {
-                // the method exists on the target - create sinon as bining
+            const descriptor = Object.getOwnPropertyDescriptor(target, targetMethodName)
+            if ( descriptor && descriptor.value && descriptor.writable ) {
+                // the method exists on the target as a regular writable property - create sinon as bining
                 return bindSinon(target, targetMethodName)
             }
             if ( sinonInfo.kind == SinonKind.Stub && targetMethodName === 'super' ) {
@@ -168,12 +169,12 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
                 }
                 return setStub(stub, sinonInfo.setStub, prevSinons)
             }
-            // the target method does not exist, create stub instead of it
-            const sinon = emptySinon()
-            target[targetMethodName] = sinon
+            // the target method does not exist as a writable property, create stub/spy instead of it
+            const sinon = emptySinon(target[targetMethodName])
+            const restoreProp = setProperty(target as never, targetMethodName, sinon)
             const restore = sinon.restore
             sinon.restore = function () {
-                delete target[targetMethodName]
+                restoreProp()
                 if (restore)
                     restore()
                 sinon.restore = restore
