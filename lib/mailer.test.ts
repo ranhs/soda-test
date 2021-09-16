@@ -13,8 +13,8 @@ class MailerTest {
 
     @it('should check for email and name')
     async checkArgs1(): PTR {
-        await expect(sendWelcomeEmail(null, null)).to.eventually.be.rejectedWith('Invalid input')
-        await expect(sendWelcomeEmail('foo@bar.com', null)).to.eventually.be.rejectedWith('Invalid input')
+        await expect(sendWelcomeEmail(null as never, null as never)).to.eventually.be.rejectedWith('Invalid input')
+        await expect(sendWelcomeEmail('foo@bar.com', null as never)).to.eventually.be.rejectedWith('Invalid input')
     }
 
     @it('should call sendEmail with email and message')
@@ -28,7 +28,7 @@ class MailerTest {
 
     @it('should check for email')
     async checkArgs2(): PTR {
-        await expect(sendPasswordResetEmail(null)).to.eventually.be.rejectedWith('Invalid input')
+        await expect(sendPasswordResetEmail(null as never)).to.eventually.be.rejectedWith('Invalid input')
     }
 
     @it('should call sendEmail with email and message')
@@ -53,8 +53,8 @@ class MailerTest {
 
     @it('should check for email and body')
     async checkArgs3(): PTR {
-        await expect(this.sendEmail(null, null)).to.eventually.be.rejectedWith('Invalid input')
-        await expect(this.sendEmail('foo@bar.com', null)).to.eventually.be.rejectedWith('Invalid input')
+        await expect(this.sendEmail(null as never, null as never)).to.eventually.be.rejectedWith('Invalid input')
+        await expect(this.sendEmail('foo@bar.com', null as never)).to.eventually.be.rejectedWith('Invalid input')
     }
 
     @it('should call sendEmail with email and message')
