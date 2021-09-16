@@ -1,5 +1,4 @@
 import { SinonFakeTimersConfig } from 'sinon'
-import { Rewire } from "./rewire"
 import { targetType, anyFunction } from './executables'
 import { factoryMethod } from './testCase'
 

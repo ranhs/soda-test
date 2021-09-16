@@ -1,6 +1,6 @@
 import testSuite from './testSuite'
 import { createSandbox } from 'sinon'
-import { SinonInfo, ControlMethods, ItInfo, DescribeInfo, SinonKind, CaseInfo, valFunction } from './testInfo'
+import { SinonInfo, ControlMethods, ItInfo, DescribeInfo, CaseInfo, valFunction } from './testInfo'
 import { createSinon } from './sinons'
 import { SinonSpy, SinonStub, Rewire } from '.'
 
