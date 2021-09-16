@@ -1,4 +1,4 @@
-import { expect, describe, context, it, TR, PTR, testStep, testCase, stepMethod } from '.'
+import { expect, describe, TR, testStep, testCase, stepMethod } from '.'
 
 class SampleTestSteps2Test {
     constructor(private a: string, private b: number) {
