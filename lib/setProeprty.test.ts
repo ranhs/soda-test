@@ -5,7 +5,7 @@ import { setProperty, targetObj } from '../test-lib/setProperty'
 import { init } from '../test-lib/rewire'
 
 // gets the original defineProperty method
-const defineProperty: (obj: targetObj, name: string, descriptor: PropertyDescriptor) => targetObj = init['_defineProperty']
+const defineProperty: (obj: targetObj, name: string, descriptor: PropertyDescriptor) => targetObj = (init as never)['_defineProperty']
 
 @describe('setProperty')
 class SetProeprtyTest {
@@ -57,7 +57,8 @@ class SetProeprtyTest {
         const obj = { }
         defineProperty(obj, "foo", { value: 222, writable: false, enumerable: true, configurable: false})
         expect( obj ).to.have.property("foo", 222)
-        if ( Object.getOwnPropertyDescriptor(obj, "foo").configurable ) {
+        const descriptor = Object.getOwnPropertyDescriptor(obj, "foo") as PropertyDescriptor
+        if ( descriptor.configurable ) {
             // cannot create unconfigurable property, nothing to check here
         } else {
             const restore = setProperty(obj, "foo", 888)
@@ -107,7 +108,8 @@ class SetProeprtyTest {
     unconfigurableGetProperty(): TR {
         const obj = { }
         defineProperty(obj, "foo", { get: ()=>222, enumerable: true, configurable: false})
-        if ( Object.getOwnPropertyDescriptor(obj, "foo").configurable ) {
+        const descriptor = Object.getOwnPropertyDescriptor(obj, "foo") as PropertyDescriptor
+        if ( descriptor.configurable ) {
             // cannot create unconfigurable property, nothing to check here 
         } else {
             expect( obj ).to.have.property("foo", 222)
