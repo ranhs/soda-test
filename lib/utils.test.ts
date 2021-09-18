@@ -1,62 +1,60 @@
 import { describe, SinonStub, stub, it, TR, expect, context, beforeEach } from '.'
 
-import { getHash, isString } from './utils'
+import { createGreeting, isString } from './utils'
+import { secret } from './config'
 
 @describe('utils')
 class UtilsTest {
 
-    @context('getHash')
+    @context('createGreeting')
 
-    @stub('./config', 'secret').returns('fake_secret')
-    secretStub: SinonStub
+    @stub('util','format').returns('ABC123')
+    formatStub: SinonStub
 
-    @stub().returns('ABC123')
-    digentStub: SinonStub
-
-    @stub().construct({digest: 'digentStub'})
-    updateStub: SinonStub
-
-    @stub('crypto','createHash').construct({update: 'updateStub'})
-    createHashStub: SinonStub
-
-    hash: string
+    greeting: string | null
 
     @beforeEach()
     beforeEach1(): void {
-        this.hash = getHash('foo')
+        this.greeting = createGreeting('foo', 12)
     }
 
-    @it('should return null if invalid string is passed')
+    @it('should return null if invalid string/number is passed')
     checkArgs1(): TR {
         // cancel the calls done by the beforeEach
-        this.createHashStub.reset()
-        let arg: unknown
+        this.formatStub.reset()
+        let name: unknown
+        let age: unknown
 
-        arg = null
-        const hash2 = getHash(arg as string)
-        arg = 123
-        const hash3 = getHash(arg as string)
-        arg = {name: 'bar'}
-        const hash4 = getHash(arg as string)
+        name = null
+        age = 1
+        const greeting1 = createGreeting(name as string, age as number)
+        name = 123
+        age = 1
+        const greeting2 = createGreeting(name as string, age as number)
+        name = "me"
+        age = null
+        const greeting3 = createGreeting(name as string, age as number)
+        name = "me"
+        age = "kuku"
+        const greeting4 = createGreeting(name as string, age as number)
 
-        expect(hash2).to.be.null
-        expect(hash3).to.be.null
-        expect(hash4).to.be.null
+        expect(greeting1).to.be.null
+        expect(greeting2).to.be.null
+        expect(greeting3).to.be.null
+        expect(greeting4).to.be.null
 
-        expect(this.createHashStub).to.not.have.been.called
+        expect(this.formatStub).to.not.have.been.called
     }
 
     @it('should get secret from config')
     checkSecret(): TR {
-        expect(this.secretStub).to.have.been.called
+        expect(secret()).to.equal('secrete')
     }
 
-    @it('should call cripto with corret settings and return hash')
+    @it('should call format with corret settings and return is result')
     checkCripto(): TR {
-        expect(this.createHashStub).to.have.been.calledWith('md5')
-        expect(this.updateStub).to.have.been.calledWith('foo_fake_secret')
-        expect(this.digentStub).to.have.been.calledWith('hex')
-        expect(this.hash).to.be.equal('ABC123')
+        expect(this.formatStub).to.have.been.calledOnceWithExactly('Congratulate %s on his %dth birthday!', 'foo', 12)
+        expect(this.greeting).to.be.equal('ABC123')
     }
 
 @context('isString')
