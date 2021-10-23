@@ -491,7 +491,69 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
                 }
             }
         }
+        const lib = getWebPackLibraray(libname)
+        if ( lib ) return lib
         throw err
+    }
+}
+
+let _webPackMap: Record<string, number[]> = null
+function getWebPackLibraray(libname: string): Record<string, unknown> {
+    loadWebPackMap()
+    const libIds = _webPackMap[libname]
+    if ( !libIds ) return null
+    let lib: Record<string, unknown> = null
+    for ( const id of libIds ) {
+        try {
+            lib = eval(`__webpack_require__(${id})`)
+        } catch {
+            lib = null
+        }
+        if ( lib !== null ) return lib
+    }
+    return null
+}
+
+const WEBPACKREQURESTARTSTR = '__webpack_require__(/*! '
+function loadWebPackMap(): void {
+    if ( _webPackMap ) return
+    let webpackModules: Record<string, ()=>void> = null
+    for ( const id in exportsCache ) {
+        const alib = exportsCache[id]
+        const alibRewire = new LibRewire(alib)
+        if ( !alibRewire.isRewired() ) continue
+        webpackModules = alibRewire.safeget('__webpack_modules__')
+        if ( webpackModules ) break
+    }
+    _webPackMap = {}
+    if ( !webpackModules ) {
+        console.error('cannot get the __webpack_modules__')
+        return
+    }
+
+    // collect all absolute path librarays with there id numbers
+    for (const id in webpackModules ) {
+        const webpackModuleText = webpackModules[id].toString()
+        let j = 0
+        while ( true ) {
+            j = webpackModuleText.indexOf(WEBPACKREQURESTARTSTR, j)
+            if ( j < 0 ) break
+            const j1 = webpackModuleText.indexOf(')', j)
+            if ( j1 > j ) {
+                const map1 = webpackModuleText.substring(j+WEBPACKREQURESTARTSTR.length, j1).split('*/').map(s=>s.trim())
+                const libNumberId = Number(map1[1])               
+                if ( !map1[0].startsWith('.') && libNumberId) {
+                    let ob = _webPackMap[map1[0]]
+                    if ( !ob ) {
+                        _webPackMap[map1[0]] = ob = []
+                    }
+                    if ( ob.indexOf(libNumberId) < 0 ) {
+                        ob.push(libNumberId)
+                    }
+                }
+            }
+            j++;
+        }
     }
 }
 
