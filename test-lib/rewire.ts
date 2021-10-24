@@ -3,6 +3,7 @@ import { anyFunction } from './executables'
 import * as tslib from 'tslib'
 import { setProperty } from './setProperty'
 import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir, SodaTestConfiguration, RewireConfiguration } from './configuration'
+import { WebPackTree } from './webPackTree'
 
 const excluded_libs = [
     'soda-test',
@@ -70,7 +71,7 @@ function rewireIsNeeded(filename: string): boolean {
     if ( filename.endsWith('.test.js') ) return false
     if ( filename.endsWith('.test.ts') ) return false
     if ( filename.endsWith('.spec.js') ) return false
-    if ( filename.endsWith('.spec.ts') ) return false
+    // if ( filename.endsWith('.spec.ts') ) return false
     if ( filename.endsWith('jest.config.js') ) return false
     return true
 }
@@ -104,7 +105,11 @@ function PatchFileContent(fileContent: string | Buffer, filename: string): strin
     }
     const light = filename.indexOf('node_modules') >=0
     const ___filename = normalizeFilename(filename)
-    if ( filename.endsWith('.js') ) {
+    if ( filename.endsWith('.spec.ts')) {
+        content =  `${content}
+/* ${'!f'}!"${___filename}" */`
+    }
+    else if ( filename.endsWith('.js') ) {
         // move the map code after the new code
         const i = content.lastIndexOf('\n')
         let mapCode = ''
@@ -422,8 +427,13 @@ function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration
 }
 
 function getTargetBasePath(caller: string, libname: string):{targetBasePath: string, fullPath?: string} {
-    const callerDirName = dirname(caller)
-    const fullPath = join(callerDirName, libname)
+    let fullPath: string
+    if ( libname ) {
+        const callerDirName = dirname(caller)
+        fullPath = join(callerDirName, libname)
+    } else {
+        fullPath = caller
+    }
     let targetBasePath: string
     // check if we are in webPack
     const wpStrings = ['/_karma_webpack_/webpack:/', '/_karma_webpack_/', '/webpack:/']
@@ -491,70 +501,22 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
                 }
             }
         }
-        const lib = getWebPackLibraray(libname)
+        const lib = getWebPackLibraray(libname, getTargetBasePath(caller,null).targetBasePath)
         if ( lib ) return lib
         throw err
     }
 }
 
-let _webPackMap: Record<string, number[]> = null
-function getWebPackLibraray(libname: string): Record<string, unknown> {
+let _webPackTree: WebPackTree = null
+function getWebPackLibraray(libname: string, caller: string): Record<string, unknown> {
     loadWebPackMap()
-    const libIds = _webPackMap[libname]
-    if ( !libIds ) return null
-    let lib: Record<string, unknown> = null
-    for ( const id of libIds ) {
-        try {
-            lib = eval(`__webpack_require__(${id})`)
-        } catch {
-            lib = null
-        }
-        if ( lib !== null ) return lib
-    }
-    return null
+    const lib = _webPackTree.findWebPackLibraray(libname, caller)
+    return lib
 }
 
-const WEBPACKREQURESTARTSTR = '__webpack_require__(/*! '
 function loadWebPackMap(): void {
-    if ( _webPackMap ) return
-    let webpackModules: Record<string, ()=>void> = null
-    for ( const id in exportsCache ) {
-        const alib = exportsCache[id]
-        const alibRewire = new LibRewire(alib)
-        if ( !alibRewire.isRewired() ) continue
-        webpackModules = alibRewire.safeget('__webpack_modules__')
-        if ( webpackModules ) break
-    }
-    _webPackMap = {}
-    if ( !webpackModules ) {
-        console.error('cannot get the __webpack_modules__')
-        return
-    }
-
-    // collect all absolute path librarays with there id numbers
-    for (const id in webpackModules ) {
-        const webpackModuleText = webpackModules[id].toString()
-        let j = 0
-        while ( true ) {
-            j = webpackModuleText.indexOf(WEBPACKREQURESTARTSTR, j)
-            if ( j < 0 ) break
-            const j1 = webpackModuleText.indexOf(')', j)
-            if ( j1 > j ) {
-                const map1 = webpackModuleText.substring(j+WEBPACKREQURESTARTSTR.length, j1).split('*/').map(s=>s.trim())
-                const libNumberId = Number(map1[1])               
-                if ( !map1[0].startsWith('.') && libNumberId) {
-                    let ob = _webPackMap[map1[0]]
-                    if ( !ob ) {
-                        _webPackMap[map1[0]] = ob = []
-                    }
-                    if ( ob.indexOf(libNumberId) < 0 ) {
-                        ob.push(libNumberId)
-                    }
-                }
-            }
-            j++;
-        }
-    }
+    if ( _webPackTree ) return
+    _webPackTree = new WebPackTree()
 }
 
 export interface Rewire {
