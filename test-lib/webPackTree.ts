@@ -72,7 +72,7 @@ export class WebPackTree {
         return this.findLibraryFromId(name, callerId)
     }
 
-    findLibraryFromId(name: string, startingPoint: Number): Record<string, unknown> {
+    findLibraryFromId(name: string, startingPoint: number): Record<string, unknown> {
         const requires: RequireLink[] = this.idToRequiredLibs[startingPoint.toString()]
         for ( const arequire of requires ) {
             if ( arequire.name === name ) {
