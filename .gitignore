@@ -45,6 +45,7 @@ Thumbs.db
 !.eslintrc.js
 !jest.js
 !plan.js
+!fixutil.js
 **/*.map
 
 # nyc

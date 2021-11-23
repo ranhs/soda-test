@@ -11,7 +11,7 @@
     "buildall": "npm run tsc && npm run test",
     "lint": "eslint --ignore-path .gitignore **/*.ts",
     "soda-plan": "node ./plan \"dist/lib/**/*.test.js\" testPlan.json",
-    "postinstall": "npm uninstall util & npm i util-0.12.4.patch.tgz"
+    "postinstall": "node fixutil.js"
   },
   "keywords": [
     "soda",
@@ -71,7 +71,7 @@
     "sinon-chai": "^3.7.0",
     "supertest": "^4.0.2",
     "ts-import": "^2.0.39",
-    "util": "file:util-0.12.4.patch.tgz"
+    "util": "0.12.4"
   },
   "devDependencies": {
     "@types/argv": "0.0.4",
@@ -101,6 +101,6 @@
     "jest.js",
     "builders.json",
     "plan.js",
-    "util-0.12.4.patch.tgz"
+    "fixutil.js"
   ]
 }
