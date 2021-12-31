@@ -124,7 +124,6 @@ class ExpectTest {
 
     @it('should expect and done')
     expectWithDone(done: Done): TR {
-        let timeout: NodeJS.Timeout
         setTimeout( () => {
             try {
                 expect(true).to.be.true
@@ -142,7 +141,7 @@ class ExpectTest {
                 done()
             }
         },20)
-        timeout = setTimeout( () => {
+        let timeout = setTimeout( () => {
             expect(true).to.be.false
         }, 1000)
     }

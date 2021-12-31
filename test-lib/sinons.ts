@@ -152,10 +152,11 @@ function createSpyOrStubSinon(sinonInfo: SinonInfo,
         if ( target && targetMethodName ) {
             // we have a target object and a name of a method
             const descriptor = Object.getOwnPropertyDescriptor(target, targetMethodName)
-            if ( descriptor && (
+            if ( !target['soda-test-star'] && ( 
+                descriptor && (
                 descriptor.value && descriptor.writable ||
                 descriptor.get && descriptor.set
-            )) {
+            ))) {
                 // the method exists on the target as a writable or getter with setter property - create sinon as bining
                 return bindSinon(target, targetMethodName)
             }

@@ -1,6 +1,5 @@
 import { dirname, join, sep} from './path'
 import { anyFunction } from './executables'
-import * as tslib from 'tslib'
 import { setProperty } from './setProperty'
 import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir, SodaTestConfiguration, RewireConfiguration } from './configuration'
 import { WebPackTree } from './webPackTree'
@@ -9,7 +8,9 @@ const excluded_libs = [
     'soda-test',
     'webpack',
     'get-intrinsic',
-    'call-bind'
+    'call-bind',
+    'jest',
+    'jest-worker'
 ]
 
 export let isKarma = false
@@ -57,7 +58,8 @@ export function getCallerFileName(level: number): string {
 
 function isExcludedLib(filename: string): boolean {
     for ( const name of excluded_libs ) {
-        if ( filename.indexOf(`${sep}node_modules${sep}${name}${sep}`) >=0 )
+        if ( filename.indexOf(`/node_modules/${name}/`) >=0 ||
+             filename.indexOf(`\\node_modules\\${name}\\`) >= 0 )
             return true
     }
     return false
@@ -169,18 +171,22 @@ function afterReadFileSync(filename: string, encoding: string, result: string | 
 }
 
 function stubImportStar(): void {
-    if ( !tslib || !tslib.__importStar || tslib.__importStar['hook'] === "soda-test" ) return
-    const _importStar = tslib.__importStar
-    const _importStarHook  = function(mod: unknown): unknown { // eslint-disable-line @typescript-eslint/no-unused-vars
-        const rv = _importStar(mod)
-        if ( rv === mod ) return rv
-        if ( !Object.getOwnPropertyDescriptor(mod, 'soda-test-star') )
-            Object.defineProperty(mod, 'soda-test-star', { value: [], writable: false, enumerable: false, configurable: true })
-        mod['soda-test-star'].push(rv)
-        return rv
+    // look for exported method __importStar on any loaded libraray
+    for ( const libId in require.cache ) {
+        if ( !require.cache[libId].exports.__importStar ) continue
+        const _importStar = require.cache[libId].exports.__importStar
+        if ( _importStar.hook === 'soda-test' ) continue // already hooked
+        const _importStarHook  = function(mod: unknown): unknown { // eslint-disable-line @typescript-eslint/no-unused-vars
+            const rv = _importStar(mod)
+            if ( rv === mod ) return rv
+            if ( !Object.getOwnPropertyDescriptor(mod, 'soda-test-star') )
+                Object.defineProperty(mod, 'soda-test-star', { value: [], writable: false, enumerable: false, configurable: true })
+            mod['soda-test-star'].push(rv)
+            return rv
+        }
+        _importStarHook['hook'] = "soda-test"
+        setProperty(require.cache[libId].exports, '__importStar', _importStarHook)
     }
-    _importStar['hook'] = "soda-test"
-    setProperty(tslib, '__importStar', _importStarHook)
 }
 
 export async function init(isKarmaParam = false): Promise<void> {
