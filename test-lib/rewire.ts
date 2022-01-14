@@ -173,6 +173,7 @@ function afterReadFileSync(filename: string, encoding: string, result: string | 
 function stubImportStar(): void {
     // look for exported method __importStar on any loaded libraray
     for ( const libId in require.cache ) {
+        if ( !require.cache[libId].exports) continue
         if ( !require.cache[libId].exports.__importStar ) continue
         const _importStar = require.cache[libId].exports.__importStar
         if ( _importStar.hook === 'soda-test' ) continue // already hooked
