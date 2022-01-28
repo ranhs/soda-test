@@ -94,6 +94,48 @@ function varsDefinitions(fileConfiguration: unknown): string {
     return rv
 }
 
+const mainFilesCache: Record<string, string[] | null> = {}
+
+function getMainFiles(path: string): {files: string[], name: string} | null {
+    const NODEMODULES = `${sep}node_modules${sep}`
+    if ( path.indexOf( NODEMODULES )<0 ) return null
+    if ( mainFilesCache[path] === undefined ) {
+        const packageFile = join(path,'package.json')
+        if ( fs['existsSync'](packageFile)) {
+            try {
+                const packageObj = JSON.parse(fs['readFileSync'](packageFile).toString())
+                const mainFiles: string[] = []
+                if ( packageObj.main) {
+                    mainFiles.push(join(path,packageObj.main))
+                }
+                if ( packageObj.moudle) {
+                    mainFiles.push(join(path,packageObj.moudle))
+                }
+                mainFilesCache[path] = mainFiles;
+            } catch {
+                mainFilesCache[path] = []
+            }
+        } else {
+            mainFilesCache[path] = null;
+        }        
+    }
+    if ( !mainFilesCache[path]) {
+        return getMainFiles(dirname(path))
+    }
+    return {
+        files: mainFilesCache[path],
+        name: path.substring(path.indexOf(NODEMODULES) + NODEMODULES.length).replace(/\\/g,'/')
+    }
+}
+
+function getNameAsMainFile(filename: string): string {
+    if ( !fs ) return null
+    const mainFiles = getMainFiles(dirname(filename))
+    if ( !mainFiles ) return null
+    if ( mainFiles.files.indexOf(filename) < 0 ) return null
+    return mainFiles.name;
+}
+
 // give a file content (as tring) this method added the __get__ and __set__ method to
 // code and returned the patch code
 function PatchFileContent(fileContent: string | Buffer, filename: string): string | Buffer {
@@ -107,6 +149,12 @@ function PatchFileContent(fileContent: string | Buffer, filename: string): strin
     }
     const light = filename.indexOf('node_modules') >=0
     const ___filename = normalizeFilename(filename)
+
+    let shortName = null
+    if ( light ) {
+        shortName = getNameAsMainFile(filename)
+    }
+
     if ( filename.endsWith('.spec.ts')) {
         content =  `${content}
 /* ${'!f'}!"${___filename}" */`
@@ -121,7 +169,8 @@ function PatchFileContent(fileContent: string | Buffer, filename: string): strin
         }
 
         content = `${(light)?'':'function __load(module,exports) {'}${content}
-Object.__rewireCurrent && Object.__rewireCurrent((exp,value)=>eval(exp),${light},${JSON.stringify(___filename)})
+const __rewireArgs = [(exp,value)=>eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}];
+(Object.__rewireQueue = Object.__rewireQueue || []).push(__rewireArgs)
 ${varsDefinitions(fileConfiguration)}${mapCode}${(light)?'':`
 return true;
 }
@@ -129,8 +178,9 @@ __load(module,exports);`}`
     } else if ( filename.endsWith('.ts') ) {
 
         content = `${(light)?'':'function __load(module: NodeModule, exports: Record<string, unknown>) {};'}${content}
-const __rewireCurrent = eval('Object.__rewireCurrent')
-__rewireCurrent && __rewireCurrent((exp: string, value: unknown): unknown => eval(exp),${light},${JSON.stringify(___filename)})
+const __rewireArgs = [(exp: string, value: unknown): unknown => eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}]
+const __rewireQueue = eval('Object.__rewireQueue = Object.__rewireQueue || []')
+__rewireQueue.push(__rewireArgs)
 ${varsDefinitions(fileConfiguration)}${(light)?'':`
 
 //}
@@ -236,9 +286,6 @@ export async function init(isKarmaParam = false): Promise<void> {
                     _readFile(path, options, (err, data) => {
                         if ( !err ) {
                             data = afterReadFileSync(path, null, data) as Buffer
-                            if ( path === 'node_modules/karma-source-map-support/lib/client.js' ) {
-                                console.log('patched file', path, '\n', data.toString())
-                            }
                         }
                         callback(err, data)
                     })
@@ -355,7 +402,13 @@ export async function init(isKarmaParam = false): Promise<void> {
         return aggregateFunction
     }
 
-    Object['__rewireCurrent'] = function( _eval: (exp: string, value: unknown) => unknown, light: boolean, ___filename: string) {
+    // each moduel that need to be rewired calls this method (indirectly) and pass to it the needed arguments in an array.
+    function rewireCurrent( arg: never[]): void {
+        const _eval: (exp: string, value: unknown) => unknown = arg[0]
+        const light: boolean = arg[1]
+        const ___filename: string = arg[2]
+        const shortName: string = arg[3]
+    
         function _get(exp: string): unknown {
             try {
                 return _eval(exp, null)
@@ -381,11 +434,33 @@ export async function init(isKarmaParam = false): Promise<void> {
             }
             _module.exports.__reload__ = __load
         }
+    
+        if ( shortName ) {
+            Object.defineProperty(_module.exports, '___shortname', {value: shortName, writable: false})
+        }
+    
         Object.defineProperty(_module.exports, '___filename', { value: ___filename, writable: false} )
         if ( isNonClassFunction(_module.exports) ) {
             _module.exports = _aggregateFunction(_module.exports)
         }
         exportsCache[___filename] = _module.exports
+
+    }
+
+
+    // if some modules that need to be rewired were loaded before we got here, they saved inside Object.__rewireQueue an array 
+    // with rewire information to perform. Call rewireQueue on each item in that array to rewire those libraraies.
+    if ( Array.isArray(Object['__rewireQueue'])) {
+        const rewireQueue: never[][] = Object['__rewireQueue']
+        for ( const rewireArg of rewireQueue ) {
+            rewireCurrent(rewireArg)
+        }
+    }
+
+    // from this point any module that shall be loaded and try to push its data into Object.__rewireQueue, will automaticly 
+    // execute the rewireCurrent method with that data.
+    Object['__rewireQueue'] = {
+        push: rewireCurrent
     }
     let config: SodaTestConfiguration = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
     if ( config.placeholder) {
@@ -501,12 +576,50 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
         return require(libname)
     } catch ( err ) {
         if ( err.code === 'MODULE_NOT_FOUND' ) {
+            console.log('** MODULE_NOT_FOUND', libname)
             // search for the module
-            for (const path in exportsCache) {
-                if (path.startsWith(`/node_modules/${libname}/`) || path.startsWith(`/node_modules/${libname}-browserify/`)) {
-                    return exportsCache[path]
+            let theLib: AnExportObject = undefined
+            // seach in exportCache
+            let keys = Object.keys(exportsCache)
+                .filter(path => path.startsWith(`/node_modules/${libname}/`) || path.startsWith(`/node_modules/${libname}-browserify/`))
+                .filter(path => path.indexOf('/node_mdoules/',1)<0)
+            console.log('**', keys)
+            if ( keys.length === 1 ) {
+                theLib = exportsCache[keys[0]]
+            } else {
+                for ( const path of keys ) {
+                    if ( exportsCache[path].___shortname === libname ) {
+                        theLib = exportsCache[path]
+                        console.log('1 - found the lib', path)
+                        break
+                    }
+                }
+                if ( !theLib && keys.length > 0 ) {
+                    console.log('2 - return lib lib out of ', keys.length, keys[keys.length-1])
+                    theLib = exportsCache[keys[keys.length-1]]
                 }
             }
+            if ( theLib ) return theLib
+            // seach in require.cache
+            keys = Object.keys(require.cache)
+                .filter(path => path.startsWith(`./node_modules/${libname}/`) || path.startsWith(`./node_modules/${libname}-browserify/`))
+                .filter(path => path.indexOf('/node_mdoules/',2)<0)
+            console.log('**', keys)
+            if ( keys.length === 1 ) {
+                theLib = require.cache[keys[0]].exports
+            } else {
+                for ( const path of keys ) {
+                    console.log('--', path, require.cache[path].exports.___shortname)
+                    if ( require.cache[path].exports.___shortname === libname ) {
+                        theLib = require.cache[path].exports
+                        break
+                    }
+                }
+            }
+            if ( !theLib && keys.length > 0 ) {
+                theLib = require.cache[keys[keys.length-1]].exports
+            }
+            if ( theLib ) return theLib
         }
         const lib = getWebPackLibraray(libname, getTargetBasePath(caller,null).targetBasePath)
         if ( lib ) return lib
