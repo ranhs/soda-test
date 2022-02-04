@@ -1,17 +1,18 @@
 
 interface RequireLink {
     name: string
-    id: number
+    id: string
 }
 
 export class WebPackTree {
-    specNameToId: Record<string, number> = {}
-    idToRequiredLibs: Record<number, RequireLink[]> = {}
+    specNameToId: Record<string, string> = {}
+    idToRequiredLibs: Record<string, RequireLink[]> = {}
+    allRequiredLibs: Record<string, string> = {}
 
     readonly WEBPACKREQURESTARTSTR = '__webpack_' + 'require__(/*! '
 
     constructor() {
-        // read the __webpack_modules__ value from one of the rewired modules in cache
+    // read the __webpack_modules__ value from one of the rewired modules in cache
         let webpackModules: Record<string, ()=>void> = null
         for ( const id in require.cache ) {
             const alib = require.cache[id].exports
@@ -25,14 +26,21 @@ export class WebPackTree {
             if (webpackModules) break
         }
         if ( !webpackModules ) {
-            throw new Error('cannot get the __webpack_modules__')
+            // could not find __webpack_modules__, try __webpack_require__.m
+            try {
+                webpackModules = eval('__webpack_require__.m')
+            } catch {
+
+            }
+
         }
-        // go over all web-pack modules and create the require tree + the map to the spec files
+        if ( !webpackModules ) {
+            throw new Error('cannot get the __webpack_modules__ or __webpack_require__.m')
+        }
+// go over all web-pack modules and create the require tree + the map to the spec files
         for (const id in webpackModules)
         {
             const webpackModuleText = webpackModules[id].toString()
-            const iid = Number(id)
-            if ( !iid ) continue
             // look for filename in the module
             let i = webpackModuleText.indexOf('/* !f'+'!"')
             if ( i > 0 ) {
@@ -40,13 +48,13 @@ export class WebPackTree {
                 const i1 = webpackModuleText.indexOf('"',i)
                 if ( i1 > i ) {
                     const filename = webpackModuleText.substring(i,i1)
-                    this.specNameToId[filename] = iid
+                    this.specNameToId[filename] = id
                 }
             }
             // look for web-require in the module
             let j = 0
-            this.idToRequiredLibs[iid] = []
-            const requires = this.idToRequiredLibs[iid]
+            this.idToRequiredLibs[id] = []
+            const requires = this.idToRequiredLibs[id]
             while ( true ) {
                 j = webpackModuleText.indexOf(this.WEBPACKREQURESTARTSTR, j)
                 if ( j < 0 ) break
@@ -54,13 +62,12 @@ export class WebPackTree {
                 if ( j1 > j ) {
                     const NameAndId = webpackModuleText.substring(j+this.WEBPACKREQURESTARTSTR.length, j1).split('*/').map(s=>s.trim())
                     const requriedLibName = NameAndId[0]
-                    const requiredLibId = Number(NameAndId[1])               
-                    if ( requiredLibId) {
-                        requires.push({
-                            name: requriedLibName,
-                            id: requiredLibId
-                        })
-                    }
+                    const requiredLibId = NameAndId[1]
+                    requires.push({
+                        name: requriedLibName,
+                        id: requiredLibId
+                    })
+                    this.allRequiredLibs[requriedLibName] = requiredLibId
                 }
                 j++
             }
@@ -72,8 +79,13 @@ export class WebPackTree {
         return this.findLibraryFromId(name, callerId)
     }
 
-    findLibraryFromId(name: string, startingPoint: number): Record<string, unknown> {
-        const requires: RequireLink[] = this.idToRequiredLibs[startingPoint.toString()]
+    findLibraryFromId(name: string, startingPoint: string): Record<string, unknown> {
+        let requires: RequireLink[] = this.idToRequiredLibs[startingPoint]
+        if ( !requires ) {
+            const id = this.allRequiredLibs[name];
+            if ( !id ) return null
+            requires = [{ name, id }]
+        }
         for ( const arequire of requires ) {
             if ( arequire.name === name ) {
                 try {
@@ -90,4 +102,5 @@ export class WebPackTree {
         }
         return null
     }
+
 }

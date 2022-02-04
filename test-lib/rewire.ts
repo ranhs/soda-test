@@ -177,7 +177,7 @@ return true;
 __load(module,exports);`}`
     } else if ( filename.endsWith('.ts') ) {
 
-        content = `${(light)?'':'function __load(module: NodeModule, exports: Record<string, unknown>) {};'}${content}
+        content = `${(light)?'':'function __load(module: unknown, exports: Record<string, unknown>) {};'}${content}
 const __rewireArgs = [(exp: string, value: unknown): unknown => eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}]
 const __rewireQueue = eval('Object.__rewireQueue = Object.__rewireQueue || []')
 __rewireQueue.push(__rewireArgs)
@@ -584,6 +584,7 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
                 .filter(path => path.startsWith(`/node_modules/${libname}/`) || path.startsWith(`/node_modules/${libname}-browserify/`))
                 .filter(path => path.indexOf('/node_mdoules/',1)<0)
             console.log('**', keys)
+            console.log('exportsCache.Count', Object.keys(exportsCache).length)
             if ( keys.length === 1 ) {
                 theLib = exportsCache[keys[0]]
             } else {
@@ -605,6 +606,7 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
                 .filter(path => path.startsWith(`./node_modules/${libname}/`) || path.startsWith(`./node_modules/${libname}-browserify/`))
                 .filter(path => path.indexOf('/node_mdoules/',2)<0)
             console.log('**', keys)
+            console.log('require.cache.Count', Object.keys(require.cache).length)
             if ( keys.length === 1 ) {
                 theLib = require.cache[keys[0]].exports
             } else {
@@ -620,7 +622,7 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
                 theLib = require.cache[keys[keys.length-1]].exports
             }
             if ( theLib ) return theLib
-        }
+        } console.log('should not get here. getting web pack libraray due to not finding ', libname)
         const lib = getWebPackLibraray(libname, getTargetBasePath(caller,null).targetBasePath)
         if ( lib ) return lib
         throw err
