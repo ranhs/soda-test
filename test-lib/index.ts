@@ -12,6 +12,8 @@ import * as chaiAsPromised from 'chai-as-promised'
 import * as sinonChai from 'sinon-chai'
 import { SinonStub as SinonSinonStub, SinonSpy as SinonSinonSpy, SinonFakeTimersConfig, SinonFakeTimers as SinonSinonFakeTimers } from 'sinon'
 export { SinonFakeTimersConfig } from 'sinon'
+import { mapLibraries } from './rewire'
+export { mapLibraries } from './rewire'
 import { createSinon } from "./sinons";
 import testSuite from './testSuite'
 import { isFunction, isString } from "util";
@@ -131,6 +133,8 @@ export function describe(text: string, extraData?: extraInfo): classDecorator {
         }
     }
 }
+
+describe.mapLibraries = mapLibraries
 
 export function global(value = true): argumentDecorator {
     return (target: targetType, propertyKey: string | symbol, parameterIndex?: number): void => {

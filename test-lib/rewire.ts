@@ -13,6 +13,24 @@ const excluded_libs = [
     'jest-worker'
 ]
 
+let librariesMap: Record<string, string> = {}
+
+export function mapLibraries(...libmap : [name: string, reqCall: () => undefined][]) {
+    librariesMap = {}
+    for (const [name,reqCall] of libmap) {
+        try {
+            const reqCallStr = reqCall.toString();
+            const targetName = eval(reqCallStr.substring(reqCallStr.lastIndexOf('(')))
+            librariesMap[name] = targetName
+        } catch {
+            try {
+                console.error(`failed to parse ${name}, ${reqCall.toString()}`);
+            } catch {}
+        }
+    }
+
+}
+
 export let isKarma = false
 
 let fs: unknown
@@ -540,6 +558,12 @@ function getTargetBasePath(caller: string, libname: string):{targetBasePath: str
 // need to pass the original caller file name (for local librarays)
 // can be used from other libraries. the result exports might be rewried
 export function getLibFromPath(libname: string, caller: string, reload = false): Record<string,unknown> {
+    const libTargetName = librariesMap[libname];
+    if ( libTargetName && !libTargetName.startsWith('.')) {
+        if ( require.cache[libTargetName] && require.cache[libTargetName].exports ) {
+            return require.cache[libTargetName].exports
+        }
+    }
     if (libname.startsWith('.')) {
         const {targetBasePath, fullPath} = getTargetBasePath(caller, libname)
         const targetPossiblePaths: string[] = [ 
