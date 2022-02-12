@@ -83,17 +83,25 @@ function isExcludedLib(filename: string): boolean {
     return false
 }
 
-function rewireIsNeeded(filename: string): boolean {
-    if ( !filename.endsWith('.js') && !filename.endsWith('.ts') ) return false
-    if ( filename.endsWith('d.ts') ) return false
-    if ( isExcludedLib(filename) ) return false
-    if ( filename.indexOf('node_modules') >= 0 ) return true // light rewire
-    if ( filename.endsWith('.test.js') ) return false
-    if ( filename.endsWith('.test.ts') ) return false
-    if ( filename.endsWith('.spec.js') ) return false
-    // if ( filename.endsWith('.spec.ts') ) return false
-    if ( filename.endsWith('jest.config.js') ) return false
-    return true
+enum RewireType {
+    None,
+    Light,
+    Regular,
+    TestCode,
+    JestConfigFile
+}
+
+function getRewireType(filename: string): RewireType {
+    if ( !filename.endsWith('.js') && !filename.endsWith('.ts') ) return RewireType.None
+    if ( filename.endsWith('d.ts') ) return RewireType.None
+    if ( isExcludedLib(filename) ) return RewireType.None
+    if ( filename.indexOf('node_modules') >= 0 ) return RewireType.Light
+    if ( filename.endsWith('.test.js') ) return RewireType.TestCode
+    if ( filename.endsWith('.test.ts') ) return RewireType.TestCode
+    if ( filename.endsWith('.spec.js') ) return RewireType.TestCode
+    if ( filename.endsWith('.spec.ts') ) return RewireType.TestCode
+    if ( filename.endsWith('jest.config.js') ) return RewireType.JestConfigFile
+    return RewireType.Regular
 }
 
 function varsDefinitions(fileConfiguration: unknown): string {
@@ -156,7 +164,7 @@ function getNameAsMainFile(filename: string): string {
 
 // give a file content (as tring) this method added the __get__ and __set__ method to
 // code and returned the patch code
-function PatchFileContent(fileContent: string | Buffer, filename: string): string | Buffer {
+function PatchFileContent(fileContent: string | Buffer, filename: string, rewireType: RewireType): string | Buffer {
     const fileConfiguration =  (rewire_config && rewire_config.files)? rewire_config.files[filename] : undefined
     const isBuffer = Buffer.isBuffer(fileContent)
     let content: string
@@ -165,37 +173,34 @@ function PatchFileContent(fileContent: string | Buffer, filename: string): strin
     } else {
         content = fileContent as string
     }
-    const light = filename.indexOf('node_modules') >=0
     const ___filename = normalizeFilename(filename)
-
-    let shortName = null
-    if ( light ) {
-        shortName = getNameAsMainFile(filename)
-    }
-
-    if ( filename.endsWith('.spec.ts')) {
-        content =  `${content}
-/* ${'!f'}!"${___filename}" */`
-    }
-    else if ( filename.endsWith('.js') ) {
-        // move the map code after the new code
-        const i = content.lastIndexOf('\n')
-        let mapCode = ''
-        if ( i > 0 && content[i+1] === '/' ) {
-            mapCode = content.substr(i+1)
-            content = content.substr(0, i)
-        }
-
-        content = `${(light)?'':'function __load(module,exports) {'}${content}
+    switch ( rewireType ) {
+        case RewireType.Regular:
+        case RewireType.Light:
+            const light = rewireType == RewireType.Light
+            let shortName = null
+            if ( light ) {
+                shortName = getNameAsMainFile(filename)
+            }
+            if ( filename.endsWith('.js') ) {
+                // move the map code after the new code
+                const i = content.lastIndexOf('\n')
+                let mapCode = ''
+                if ( i > 0 && content[i+1] === '/' ) {
+                    mapCode = content.substr(i+1)
+                    content = content.substr(0, i)
+                }
+        
+                content = `${(light)?'':'function __load(module,exports) {'}${content}
 const __rewireArgs = [(exp,value)=>eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}];
 (Object.__rewireQueue = Object.__rewireQueue || []).push(__rewireArgs)
 ${varsDefinitions(fileConfiguration)}${mapCode}${(light)?'':`
 return true;
 }
 __load(module,exports);`}`
-    } else if ( filename.endsWith('.ts') ) {
-
-        content = `${(light)?'':'function __load(module: unknown, exports: Record<string, unknown>) {};'}${content}
+            } else if ( filename.endsWith('.ts') ) {
+        
+                content = `${(light)?'':'function __load(module: unknown, exports: Record<string, unknown>) {};'}${content}
 const __rewireArgs = [(exp: string, value: unknown): unknown => eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}]
 const __rewireQueue = eval('Object.__rewireQueue = Object.__rewireQueue || []')
 __rewireQueue.push(__rewireArgs)
@@ -203,8 +208,17 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
 
 //}
 //__load(module,exports)`}`
+            }
+            break
+        case RewireType.TestCode:
+            content = TestCodeRewire(content, ___filename)
+            if ( filename.endsWith('.spec.ts')) {
+                content =  `${content}
+/* ${'!f'}!"${___filename}" */`
+            }
+        
     }
-    
+
     // turn content back to buffer if need to
     if ( isBuffer ) {
         fileContent = new Buffer(content)
@@ -212,6 +226,148 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
         fileContent = content
     }
 return fileContent
+}
+
+//TODO: 
+// 1. why in karma some of the test libraries are not rewired (or do they?)
+// 2. add documents about this code
+// 3. when does __mapLibraries is called related to test execution? maybe the order is not right for seveal test files...
+// 4. Handle the case of first test-code file (mocha)
+// 5. remove to temporaray logs
+// 6. remove the code of finding libraries in differnt ways. (use only map libraries)
+// temporaray logs - to delete
+const tmpLogs: string[] = []
+function log(text: string): void {
+    tmpLogs.push(text)
+    //console.log(text)
+}
+setTimeout(()=>{
+    for (const logline of tmpLogs ) {
+        console.log(logline)
+    }
+}, 15000)
+
+function TestCodeRewire(content: string, ___filename: string): string {
+    log(`TestCodeRewire: ${___filename}`)
+    if ( content.indexOf('__mapLibraries') >=0 ) {
+        //already rewired
+        return content;
+    }
+    const libNames: string[] = []
+    if ( content.indexOf('__decorate') >= 0) {
+        let decorators = getDecorators(content)
+        if ( decorators.filter(d=>d.name === 'describe').length === 0 ) return content // no describe decorator
+        if ( decorators.filter(d=>d.name === 'spy' || d.name === 'stub' || d.name === 'rewire' || d.name === 'importPrivate').length === 0 ) return content // no sinon
+        for (const dec of decorators) {
+            switch ( dec.name ) {
+                case 'spy':
+                case 'stub':
+                case 'rewire':
+                case 'importPrivate':
+                    let i = dec.args.indexOf(',')
+                    const j = dec.args.indexOf(')')
+                    if ( i< 0 ) i = j
+                    i = Math.min(i,j)
+                    if ( i< 0 ) continue
+                    let arg0: string = undefined
+                    try { arg0 = eval(`${dec.args.substring(1,i)}`)} catch {}
+                    if ( typeof arg0 === 'string' && libNames.indexOf(arg0)<0 ) {
+                        libNames.push(arg0)
+                    }
+            }
+        }
+    } else {
+        if ( content.indexOf('@describe') < 0 ) return content
+        if ( content.indexOf('@spy') < 0 && content.indexOf('@stub') < 0 && content.indexOf('@rewire') < 0  && content.indexOf('@importPrivate') < 0) return content
+        let i = 0
+        while (i>=0) {
+            let i1 = content.indexOf('@spy',i)
+            i1 = (i1<0)?content.length:i1
+            let i2 = content.indexOf('@stub', i)
+            i2 = (i2<0)?content.length:i2
+            let i3 = content.indexOf('@rewire', i) 
+            i3 = (i3<0)?content.length:i3
+            let i4 = content.indexOf('@importPrivate', i)
+            i4 = (i4<0)?content.length:i4
+            i = Math.min(i1,i2,i3,i4)+1
+            if ( i >= content.length ) break
+            let j = content.indexOf('(',i)
+            if ( j < 0 ) continue
+            let _i = content.indexOf(',',j)
+            const _j = content.indexOf(')',j)
+            if ( _i <0 ) _i = _j
+            _i = Math.min(_i, _j)
+            if ( _i < 0 ) continue
+            let arg0: string = undefined
+            try { arg0 = eval(`${content.substring(j+1,_i)}`)} catch {}
+            if ( typeof arg0 === 'string' && libNames.indexOf(arg0)<0 ) {
+                libNames.push(arg0)
+            }
+        }
+
+    }
+    if ( libNames.length > 0 ) {
+        let i = content.indexOf('@describe')
+        let _describe = 'describe'
+        if ( i>=0 ) {
+            content = `${content.substring(0,i)}__mapLibraries();${content.substring(i)}`
+        } else {
+            i = content.indexOf('.describe')
+            if ( i<0 ) return content
+            let j = content.lastIndexOf('\n',i)
+            if ( j<0) return content
+            _describe = content.substring(j,i+9).trim()
+            i = content.lastIndexOf('= __decorate([',i)
+            if ( i<0 ) return content
+            j = content.lastIndexOf('\n', i)
+            if ( j<0 ) return content
+            const className = content.substring(j,i).trim()
+            log(className)
+            i = content.indexOf(`let ${className}`)
+            if ( i<0 ) return content
+            content = `${content.substring(0,i)}__mapLibraries();${content.substring(i)}`
+        }
+        let endOfCode = content.indexOf('//# sourceMappingURL')
+        if ( endOfCode < 0 ) endOfCode = content.length;
+        let mapLibrariesCode = `\nfunction __mapLibraries() { ${_describe}.mapLibraries(\n`
+        libNames.forEach((libName,i) => {
+            mapLibrariesCode += `[${JSON.stringify(libName)}, ()=>require(${JSON.stringify(libName)})]${(i===libNames.length-1)?'':','}\n`
+        })
+        mapLibrariesCode += `)}\n`
+        content = `${content.substring(0,endOfCode)}${mapLibrariesCode}${content.substring(endOfCode)}`
+    }
+    if ( ___filename === '/dist/lib/test/lib.test.js' || ___filename === '/src/test-samples/test/lib.spec.ts') {
+        log(`----------------------------------------${___filename}`)
+        log(content)
+        log('----------------------------------------')
+    }
+    return content
+}
+
+function getDecorators(content: string) {
+    const lines = content.split('\n').map(l => l.trim())
+    const decorators: {name: string, args: string}[] = []
+    let inDecorate = false
+    for( const line of lines ) {
+        if ( line.endsWith('__decorate([') ) {
+            inDecorate = true;
+            continue
+        }
+        if ( line.startsWith(']') ) {
+            inDecorate = false;
+            continue
+        }
+        if ( inDecorate ) {
+            var i = line.indexOf('.')
+            if ( i<0 ) continue
+            var j = line.indexOf('(', i)
+            if ( j<0 ) continue
+            const name = line.substring(i+1, j)
+            const args = line.substring(j, line.endsWith(',')?line.length-1:line.length)
+            decorators.push({name,args})
+        }
+    }
+    return decorators
 }
 
 function normalizeFilename(filename: string): string {
@@ -231,9 +387,10 @@ function afterReadFileSync(filename: string, encoding: string, result: string | 
     if (filename === _readconfiguration_filename) {
         return createReadConfigurationFile(_init_configuration, Buffer.isBuffer(result))
     } 
-    if ( rewireIsNeeded(filename) ) {
+    let rewireType = getRewireType(filename)
+    if ( rewireType != RewireType.None ) {
         // this file is JS file that is not a test file and is not under node_modules, need to rewire it
-        result = PatchFileContent(result, filename)
+        result = PatchFileContent(result, filename, rewireType)
     }
     return result
 }
