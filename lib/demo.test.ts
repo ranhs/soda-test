@@ -3,7 +3,7 @@ import { expect, describe, context, it, TR, PTR, spy, SinonSpy, SinonStub, stub,
 import { add, addCallbck, addPromise, foo, bar, dividePromise, callDefualt } from './demo'
 
 
-@describe('demo')
+__mapLibraries();@describe('demo')
 class TestDemoTest {
 
 @context('add')
@@ -110,3 +110,6 @@ class TestDemoTest {
     }
 }
 
+function __mapLibraries() { describe.mapLibraries(
+    ["./demo", ()=>require("./demo")]
+)}

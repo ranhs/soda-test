@@ -13,15 +13,25 @@ const excluded_libs = [
     'jest-worker'
 ]
 
-let librariesMap: Record<string, string> = {}
+const librariesMap: Record<string, Record<string, string>> = {}
 
+// this methods (defined as describe.mapLibraraies) is called in the test-code by the rewired code with list of libraries the calling test code needs
+// each argument is and array of 2 items: the name of the library and a method calls require on that library.
+// the require call might change by webpack to __webpack_require and the argument may change to the name of the libraray in web-pack
 export function mapLibraries(...libmap : [name: string, reqCall: () => undefined][]) {
-    librariesMap = {}
+    // get the caller file-name
+    const caller = getCallerFileName(1)
+    // all that data is saved under the caller filename, so we have the data that is need by each test-code file
+    librariesMap[caller] = {}
     for (const [name,reqCall] of libmap) {
         try {
+            // look at the method call as the JS script code of it
             const reqCallStr = reqCall.toString();
+            // evaloate the value of the argument pass to the require or __webpack_require method
             const targetName = eval(reqCallStr.substring(reqCallStr.lastIndexOf('(')))
-            librariesMap[name] = targetName
+            // save result it that name of the library in web-pack (or the original libraray if we are not in webpack)
+            // save the mapping from the orginal library name to the web-pack (or original) libraray name, for the relevant test-code file
+            librariesMap[caller][name] = targetName
         } catch {
             try {
                 console.error(`failed to parse ${name}, ${reqCall.toString()}`);
@@ -229,15 +239,15 @@ return fileContent
 }
 
 //TODO: 
-// 1. why in karma some of the test libraries are not rewired (or do they?)
-// 2. add documents about this code
-// 3. when does __mapLibraries is called related to test execution? maybe the order is not right for seveal test files...
-// 4. Handle the case of first test-code file (mocha)
+// V1. why in karma some of the test libraries are not rewired (or do they?)
+// V2. add documents about this code
+// V3. when does __mapLibraries is called related to test execution? maybe the order is not right for seveal test files...
+// V4. Handle the case of first test-code file (mocha)
 // 5. remove to temporaray logs
 // 6. remove the code of finding libraries in differnt ways. (use only map libraries)
 // temporaray logs - to delete
 const tmpLogs: string[] = []
-function log(text: string): void {
+export function log(text: string): void {
     tmpLogs.push(text)
     //console.log(text)
 }
@@ -247,40 +257,64 @@ setTimeout(()=>{
     }
 }, 15000)
 
+// this method is called when need to rewire a test code (.test.js / .test.ts / .spec.js / .spec.ts)
+// content - the text of the test-code (as string)
+// ___filename - the name of the test-code file
+// returns - the test code after the rewire
+//  the write (if need to) add a function __mapLibraries() that calls the describe.mapLibraries with list of all libraries that are needed for this test code 
+//  (used by stub/spy/rewire/etc...), each argument to describe.mapLibries is array of 2 arguments the name of the libraray and call to require of that libraray. 
 function TestCodeRewire(content: string, ___filename: string): string {
     log(`TestCodeRewire: ${___filename}`)
+    // if the content already include a menthon fo __mapLibraries, it is already rewired, so nothing need to be done
     if ( content.indexOf('__mapLibraries') >=0 ) {
         //already rewired
         return content;
     }
+    // this array hold all the libries names that are found in the test code.
     const libNames: string[] = []
+    // in JS code that are traplied from TS, you should find the "__decorate" call (instead of the @ anotetion)
     if ( content.indexOf('__decorate') >= 0) {
+        // the getDecorators finds in the JS code all the descriptors (name and arguments it gets as appear in the test-code)
         let decorators = getDecorators(content)
-        if ( decorators.filter(d=>d.name === 'describe').length === 0 ) return content // no describe decorator
+        // if there are no "describe" decorator, nothing to do
+        if ( decorators.filter(d=>d.name === 'describe').length === 0 ) return content
+        // if could not found any of the soda-test sinon decorators, nothing to do
         if ( decorators.filter(d=>d.name === 'spy' || d.name === 'stub' || d.name === 'rewire' || d.name === 'importPrivate').length === 0 ) return content // no sinon
+        // go over all (soda-test sinon) decorators
         for (const dec of decorators) {
             switch ( dec.name ) {
                 case 'spy':
                 case 'stub':
                 case 'rewire':
                 case 'importPrivate':
+                    // find the first argument of the decorator (ends with "," or ")")
                     let i = dec.args.indexOf(',')
                     const j = dec.args.indexOf(')')
                     if ( i< 0 ) i = j
                     i = Math.min(i,j)
                     if ( i< 0 ) continue
                     let arg0: string = undefined
+                    // try to evalote the code between the "(" of the arguments and the ending "," or ")" of the first argument
                     try { arg0 = eval(`${dec.args.substring(1,i)}`)} catch {}
+                    // if the first argument was detected as string. this string is the libraray name this test-code is using, add it (unless was already added before)
                     if ( typeof arg0 === 'string' && libNames.indexOf(arg0)<0 ) {
                         libNames.push(arg0)
                     }
             }
         }
     } else {
+        // if there is no "__decorate" in the test-code, than this is a TS code (or a code that should use the @ decorators anotation)
+
+        // if there is not @describe decorator, nothing to do
         if ( content.indexOf('@describe') < 0 ) return content
+        // if could not find any of the soda-test sinon decorators, then nothing to do
         if ( content.indexOf('@spy') < 0 && content.indexOf('@stub') < 0 && content.indexOf('@rewire') < 0  && content.indexOf('@importPrivate') < 0) return content
         let i = 0
+        // this loop checks all the soda-test sinon decorators in the test-code
+        // "i" is the index in the code we are look now to find the next decorator
         while (i>=0) {
+            // "i1" ... "i4" are the next location of each of the soda-test sinon decorators
+            // if a decorator was found set is index to be the end of the code
             let i1 = content.indexOf('@spy',i)
             i1 = (i1<0)?content.length:i1
             let i2 = content.indexOf('@stub', i)
@@ -289,51 +323,78 @@ function TestCodeRewire(content: string, ___filename: string): string {
             i3 = (i3<0)?content.length:i3
             let i4 = content.indexOf('@importPrivate', i)
             i4 = (i4<0)?content.length:i4
+            // the minimum index is the index of the next soda-test sinon decorator. 
+            // we set i to be after the "@" sign, so next time we shall find the next decorator
             i = Math.min(i1,i2,i3,i4)+1
+            // if we coudl not find any decorator, we are done
             if ( i >= content.length ) break
+            // after the name of the decorator, we look for the "(" that starts its paramters
+            // "j" is the index in the test-code of that "(" char
             let j = content.indexOf('(',i)
             if ( j < 0 ) continue
+            // look for the end of the first argument. should end with "," or ")"
+            // "_i" is the index of the end of the first argument
             let _i = content.indexOf(',',j)
             const _j = content.indexOf(')',j)
             if ( _i <0 ) _i = _j
             _i = Math.min(_i, _j)
             if ( _i < 0 ) continue
+            // try to evaluate the value of the first argument between the "j" location  (not including the "(" char) and the "_i" location
             let arg0: string = undefined
             try { arg0 = eval(`${content.substring(j+1,_i)}`)} catch {}
+            // if the first argument was detected as a string, this string is the libraray this test-code is using, add it, unless it was already added before
             if ( typeof arg0 === 'string' && libNames.indexOf(arg0)<0 ) {
                 libNames.push(arg0)
             }
         }
 
     }
+    // at this point "libNames" hold the names of all libraries this test-code is using
     if ( libNames.length > 0 ) {
+        // if the test-code includes "@descirbe" than it is using the @ decorators anotations.
         let i = content.indexOf('@describe')
         let _describe = 'describe'
         if ( i>=0 ) {
+            // in this case we need to add before the call the @describe decorator the call to the __mapLibraries() methods (shall be defined latter)
             content = `${content.substring(0,i)}__mapLibraries();${content.substring(i)}`
         } else {
+            // this is the JS code transplied from TS
+
+            // look for the call of the describe decorator (the call is on a requried object, that we don't know its name)
             i = content.indexOf('.describe')
             if ( i<0 ) return content
+            // "i" hold the index of the "." before the call to describe
+            // "j" holds the end of the previous line. We need the name of the object between them.
             let j = content.lastIndexOf('\n',i)
             if ( j<0) return content
+            // get the name that is called for the describe decorator (including the object that is definding it)
             _describe = content.substring(j,i+9).trim()
+            // "i" now is moved to the __decorate call before the name of the describe decorator (poting to the "=" char that shall sets the decorated class to the class name)
             i = content.lastIndexOf('= __decorate([',i)
             if ( i<0 ) return content
+            // "j" is moved to the end of the line before the call to __decorate of the describe decorator
             j = content.lastIndexOf('\n', i)
             if ( j<0 ) return content
+            // the text at the start of the line until the above "=" sign, is the name of the class that is decorated with the describe decorator
             const className = content.substring(j,i).trim()
             log(className)
+            // "i" is now set to the index of where that class was defined int he JS test code (long before the decorator)
             i = content.indexOf(`let ${className}`)
             if ( i<0 ) return content
+            // add a call to the __mapLibraries() function before the the class definision
             content = `${content.substring(0,i)}__mapLibraries();${content.substring(i)}`
         }
+        // the "__mapLibraries method shall be added to the end of the text code (if there is a sourceMapppingURL in the code, it shall be added before it)"
         let endOfCode = content.indexOf('//# sourceMappingURL')
         if ( endOfCode < 0 ) endOfCode = content.length;
+        // define the __mapLibraries() function code: it calls the describe.mapLibraries method and pass to it list of 2 arguments arrays, one for each library
         let mapLibrariesCode = `\nfunction __mapLibraries() { ${_describe}.mapLibraries(\n`
         libNames.forEach((libName,i) => {
+            // first arguemnt the the libraray name, and the second is a method that calls require on that libraray name
             mapLibrariesCode += `[${JSON.stringify(libName)}, ()=>require(${JSON.stringify(libName)})]${(i===libNames.length-1)?'':','}\n`
         })
         mapLibrariesCode += `)}\n`
+        // place the definision of the __mapLibraries method in the test-code.
         content = `${content.substring(0,endOfCode)}${mapLibrariesCode}${content.substring(endOfCode)}`
     }
     if ( ___filename === '/dist/lib/test/lib.test.js' || ___filename === '/src/test-samples/test/lib.spec.ts') {
@@ -484,6 +545,30 @@ export async function init(isKarmaParam = false): Promise<void> {
                 }
                 childProcess['fork']['_hooked'] = 'soda-test'
             }
+        }
+        log('%%%%%%%%%%%end of rewire.init()')
+        // look for already loaded test files
+        let firstTestCodeFile: string = null
+        const stack = (new Error()).stack
+        for ( const filename of Object.keys(require.cache))
+        {
+            if (filename.endsWith('.test.ts') ||
+                filename.endsWith('.test.js') ||
+                filename.endsWith('.spec.ts') ||
+                filename.endsWith('.spec.js')) {
+                
+                if ( stack.indexOf(filename) >=0 ) {
+                    // we have found a test file in the loaded libraray that is in the current stack
+                    firstTestCodeFile = filename
+                    break
+                }
+            }
+        }
+        if ( firstTestCodeFile ) {
+            log(`%%% firstTestCodeFile=${firstTestCodeFile}`)
+            // set a default map for this test-code
+            librariesMap[firstTestCodeFile] = { __All : true as never}
+            log(`%%% librariesMap[${JSON.stringify(firstTestCodeFile)}] = ${JSON.stringify(librariesMap[firstTestCodeFile])}`)
         }
     }
     // hook Object.defineProeprty
@@ -683,6 +768,7 @@ function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration
     return rewireConfiguration
 }
 
+/* delete this method */
 function getTargetBasePath(caller: string, libname: string):{targetBasePath: string, fullPath?: string} {
     let fullPath: string
     if ( libname ) {
@@ -712,50 +798,62 @@ function getTargetBasePath(caller: string, libname: string):{targetBasePath: str
 }
 
 // this method returns teh exports of a libraray (just like require)
-// need to pass the original caller file name (for local librarays)
+// need to pass the original caller file name.
 // can be used from other libraries. the result exports might be rewried
 export function getLibFromPath(libname: string, caller: string, reload = false): Record<string,unknown> {
-    const libTargetName = librariesMap[libname];
+    // get the name of the library from the librariesMap (incase of webpack we might get a differnt libraray name)
+    if ( !librariesMap[caller] ) {
+        log(`** we don't have librariesMap for ${caller} \n${librariesMap[caller]}`)
+    }
+    const libTargetName = (librariesMap[caller].__All)?libname: librariesMap[caller][libname]
+    // if we got a name for the libaray (that does not start with '.') we should find the libaray in the exports cache
     if ( libTargetName && !libTargetName.startsWith('.')) {
         if ( require.cache[libTargetName] && require.cache[libTargetName].exports ) {
             return require.cache[libTargetName].exports
         }
     }
+    // in the case of no web-pack we still have the orignal libaray-name, that start with '.' incase of relative path
     if (libname.startsWith('.')) {
-        const {targetBasePath, fullPath} = getTargetBasePath(caller, libname)
-        const targetPossiblePaths: string[] = [ 
-            targetBasePath, 
-            targetBasePath + ".js", 
-            join(targetBasePath, "index.js"),
-            targetBasePath + ".ts",
-            join(targetBasePath, "index.ts")
-        ]
-
-
-        if ( fullPath ) {
-                // requireing the raget library to make sure it is in cache 
-            // (if it is already loaded, this will not have an effent)
-            require(fullPath)
+        // curentRelativePath - shall include the relative path from currentPath to the target path (+ the relative libname)
+        const targetPath = dirname(caller)
+        let currentPath = __dirname
+        let currentRelativePath = ''
+        // going up on "currentPath" until getting to a parent of "targetPath"
+        while ( !targetPath.startsWith(currentPath) ) {
+            const i = currentPath.lastIndexOf(sep)
+            currentPath = currentPath.substring(0,i)
+            // each up folder adding ".." to relative path
+            currentRelativePath = join(currentRelativePath, '..')
         }
-        for ( const path of targetPossiblePaths ) {
-            if ( exportsCache[path] ) {
-                const _exports = exportsCache[path]
-                if ( reload ) {
-                    const _module: {exports: Record<string,unknown>} = {exports: {}}
-                    if ( !_exports.__reload__(_module as NodeModule,_module.exports) ) {
-                        throw new Error(`reloading module is not supported for ${libname}`)
-                    }
-                    return _module.exports
+        // add the folders from targetPath, the are not including in currentPath
+        currentRelativePath = join(currentRelativePath, targetPath.substring(currentPath.length))
+        // add the libraray relative path
+        currentRelativePath = join(currentRelativePath, libname)
+        try {
+            // now we can require the requres library, since the relative path is from current folder
+            const _exports =  require(currentRelativePath)
+            // use the __reload__() method if we have the "reload" flag
+            if ( reload ) {
+                const _module: {exports: Record<string,unknown>} = {exports: {}}
+                if ( !_exports.__reload__(_module as NodeModule,_module.exports) ) {
+                    throw new Error(`reloading module is not supported for ${libname}`)
                 }
-                return _exports
+                return _module.exports
             }
+            return _exports
+        } catch (err) {
+            throw new Error(`could not find libraray ${libname} ${err}`)
         }
-        throw new Error(`could not find libraray ${libname}`)
     }
     // node_modles lib, just return it
     try {
         return require(libname)
     } catch ( err ) {
+        log('************** could not find the request libraray ***************')
+        log(`libname=${libname}`)
+        log(`libTargetName=${libTargetName}`)
+        log(`caller=${caller}`)
+    
         if ( err.code === 'MODULE_NOT_FOUND' ) {
             console.log('** MODULE_NOT_FOUND', libname)
             // search for the module
