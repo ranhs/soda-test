@@ -3,7 +3,7 @@ import { expect, describe, context, it, TR, PTR, spy, SinonSpy, SinonStub, stub,
 import { add, addCallbck, addPromise, foo, bar, dividePromise, callDefualt } from './demo'
 
 
-__mapLibraries();@describe('demo')
+@describe('demo')
 class TestDemoTest {
 
 @context('add')
@@ -109,7 +109,3 @@ class TestDemoTest {
         expect(this.theDefaultStub).to.have.been.calledOnce
     }
 }
-
-function __mapLibraries() { describe.mapLibraries(
-    ["./demo", ()=>require("./demo")]
-)}
