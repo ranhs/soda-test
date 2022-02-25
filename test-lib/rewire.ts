@@ -2,7 +2,6 @@ import { dirname, join, sep} from './path'
 import { anyFunction } from './executables'
 import { setProperty } from './setProperty'
 import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir, SodaTestConfiguration, RewireConfiguration } from './configuration'
-import { WebPackTree } from './webPackTree'
 
 const excluded_libs = [
     'soda-test',
@@ -67,7 +66,7 @@ const librariesGetters: Record<string, LibGetter> = {}
 // this methods (defined as describe.mapLibraraies) is called in the test-code by the rewired code with list of libraries the calling test code needs
 // each argument is and array of 2 items: the name of the library and a method calls require on that library.
 // the require call might change by webpack to __webpack_require and the argument may change to the name of the libraray in web-pack
-export function mapLibraries(...libmap : [name: string, reqCall: () => undefined][]) {
+export function mapLibraries(...libmap : [name: string, reqCall: () => undefined][]): void {
     // get the caller file-name
     const caller = getCallerFileName(1)
     // all that data is saved under the caller filename, so we have the data that is need by each test-code file
@@ -257,7 +256,7 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
             }
             break
         case RewireType.TestCode:
-            content = TestCodeRewire(content, ___filename)
+            content = TestCodeRewire(content)
             if ( filename.endsWith('.spec.ts')) {
                 content =  `${content}
 /* ${'!f'}!"${___filename}" */`
@@ -281,7 +280,7 @@ return fileContent
 // returns - the test code after the rewire
 //  the write (if need to) add a function __mapLibraries() that calls the describe.mapLibraries with list of all libraries that are needed for this test code 
 //  (used by stub/spy/rewire/etc...), each argument to describe.mapLibries is array of 2 arguments the name of the libraray and call to require of that libraray. 
-function TestCodeRewire(content: string, ___filename: string): string {
+function TestCodeRewire(content: string): string {
     // if the content already include a menthon fo __mapLibraries, it is already rewired, so nothing need to be done
     if ( content.indexOf('__mapLibraries') >=0 ) {
         //already rewired
@@ -292,7 +291,7 @@ function TestCodeRewire(content: string, ___filename: string): string {
     // in JS code that are traplied from TS, you should find the "__decorate" call (instead of the @ anotetion)
     if ( content.indexOf('__decorate') >= 0) {
         // the getDecorators finds in the JS code all the descriptors (name and arguments it gets as appear in the test-code)
-        let decorators = getDecorators(content)
+        const decorators = getDecorators(content)
         // if there are no "describe" decorator, nothing to do
         if ( decorators.filter(d=>d.name === 'describe').length === 0 ) return content
         // if could not found any of the soda-test sinon decorators, nothing to do
@@ -347,7 +346,7 @@ function TestCodeRewire(content: string, ___filename: string): string {
             if ( i >= content.length ) break
             // after the name of the decorator, we look for the "(" that starts its paramters
             // "j" is the index in the test-code of that "(" char
-            let j = content.indexOf('(',i)
+            const j = content.indexOf('(',i)
             if ( j < 0 ) continue
             // look for the end of the first argument. should end with "," or ")"
             // "_i" is the index of the end of the first argument
@@ -430,9 +429,9 @@ function getDecorators(content: string) {
             continue
         }
         if ( inDecorate ) {
-            var i = line.indexOf('.')
+            const i = line.indexOf('.')
             if ( i<0 ) continue
-            var j = line.indexOf('(', i)
+            const j = line.indexOf('(', i)
             if ( j<0 ) continue
             const name = line.substring(i+1, j)
             const args = line.substring(j, line.endsWith(',')?line.length-1:line.length)
@@ -459,7 +458,7 @@ function afterReadFileSync(filename: string, encoding: string, result: string | 
     if (filename === _readconfiguration_filename) {
         return createReadConfigurationFile(_init_configuration, Buffer.isBuffer(result))
     } 
-    let rewireType = getRewireType(filename)
+    const rewireType = getRewireType(filename)
     if ( rewireType != RewireType.None ) {
         // this file is JS file that is not a test file and is not under node_modules, need to rewire it
         result = PatchFileContent(result, filename, rewireType)
@@ -793,18 +792,6 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
     }
     throw new Error(`we don't have libraries getters for caller ${caller} - libname = ${libname}`)
 
-}
-
-let _webPackTree: WebPackTree = null
-function getWebPackLibraray(libname: string, caller: string): Record<string, unknown> {
-    loadWebPackMap()
-    const lib = _webPackTree.findWebPackLibraray(libname, caller)
-    return lib
-}
-
-function loadWebPackMap(): void {
-    if ( _webPackTree ) return
-    _webPackTree = new WebPackTree()
 }
 
 export interface Rewire {
