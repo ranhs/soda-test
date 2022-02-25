@@ -2,7 +2,7 @@ import "reflect-metadata"
 
 import { SinonKind, SetStubType, SinonInfo, getInfo, extraInfo } from "./testInfo"
 import { TestDescribe, targetType, anyFunction } from "./executables";
-import { getCallerFileName, init as rewireInit, isKarma, log as rewireLog } from "./rewire"
+import { getCallerFileName, init as rewireInit, isKarma } from "./rewire"
 export { Rewire, createAggregation } from "./rewire"
 import * as _assert from "assert"
 import { SuperTest, Test } from 'supertest'

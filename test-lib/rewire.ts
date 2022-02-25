@@ -13,7 +13,56 @@ const excluded_libs = [
     'jest-worker'
 ]
 
-const librariesMap: Record<string, Record<string, string>> = {}
+interface LibGetter {
+    getLib(name: string): AnExportObject
+}
+
+class LibGetterClass implements LibGetter{
+    libGetters: Record<string, ()=>AnExportObject> = {}
+
+    addRequireCall(name: string, reqCall: () => AnExportObject): void {
+        this.libGetters[name] = reqCall
+    }
+
+    getLib(name: string): AnExportObject {
+        const reqCall = this.libGetters[name]
+        if ( !reqCall ) return null
+        return reqCall()
+    }
+}
+
+// this class require the requested classes (With no mapping, not for web-pack)
+// incase of relative path need to fix the relativity accoring to the caller
+class LibGetterDefault implements LibGetter {
+    constructor( private caller: string ) {
+    }
+
+    getLib(name: string): AnExportObject {
+        if ( name.startsWith('.') ) {
+            // curentRelativePath - shall include the relative path from currentPath to the target path (+ the relative libname)
+            const targetPath = dirname(this.caller)
+            let currentPath = __dirname
+            let currentRelativePath = ''
+            // going up on "currentPath" until getting to a parent of "targetPath"
+            while ( !targetPath.startsWith(currentPath) ) {
+                const i = currentPath.lastIndexOf(sep)
+                currentPath = currentPath.substring(0,i)
+                // each up folder adding ".." to relative path
+                currentRelativePath = join(currentRelativePath, '..')
+            }
+            // add the folders from targetPath, the are not including in currentPath
+            currentRelativePath = join(currentRelativePath, targetPath.substring(currentPath.length))
+            // add the libraray relative path
+            currentRelativePath = join(currentRelativePath, name)
+            // now we can require the requres library, since the relative path is from current folder
+            return require(currentRelativePath)
+        }
+        // node_module lib, just return it
+        return require(name)
+    }
+}
+
+const librariesGetters: Record<string, LibGetter> = {}
 
 // this methods (defined as describe.mapLibraraies) is called in the test-code by the rewired code with list of libraries the calling test code needs
 // each argument is and array of 2 items: the name of the library and a method calls require on that library.
@@ -22,23 +71,11 @@ export function mapLibraries(...libmap : [name: string, reqCall: () => undefined
     // get the caller file-name
     const caller = getCallerFileName(1)
     // all that data is saved under the caller filename, so we have the data that is need by each test-code file
-    librariesMap[caller] = {}
+    const libGetters = new LibGetterClass()
+    librariesGetters[caller] = libGetters
     for (const [name,reqCall] of libmap) {
-        try {
-            // look at the method call as the JS script code of it
-            const reqCallStr = reqCall.toString();
-            // evaloate the value of the argument pass to the require or __webpack_require method
-            const targetName = eval(reqCallStr.substring(reqCallStr.lastIndexOf('(')))
-            // save result it that name of the library in web-pack (or the original libraray if we are not in webpack)
-            // save the mapping from the orginal library name to the web-pack (or original) libraray name, for the relevant test-code file
-            librariesMap[caller][name] = targetName
-        } catch {
-            try {
-                console.error(`failed to parse ${name}, ${reqCall.toString()}`);
-            } catch {}
-        }
+        libGetters.addRequireCall(name, reqCall)
     }
-
 }
 
 export let isKarma = false
@@ -61,7 +98,6 @@ interface Loadable {
 interface AnExportObject extends Loadable, Record<string, unknown> {
 }
 
-const exportsCache: {[filename: string]: AnExportObject} = {}
 try {
     childProcess = require('child_process')
 } catch (err) {
@@ -238,24 +274,6 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
 return fileContent
 }
 
-//TODO: 
-// V1. why in karma some of the test libraries are not rewired (or do they?)
-// V2. add documents about this code
-// V3. when does __mapLibraries is called related to test execution? maybe the order is not right for seveal test files...
-// V4. Handle the case of first test-code file (mocha)
-// 5. remove to temporaray logs
-// 6. remove the code of finding libraries in differnt ways. (use only map libraries)
-// temporaray logs - to delete
-const tmpLogs: string[] = []
-export function log(text: string): void {
-    tmpLogs.push(text)
-    //console.log(text)
-}
-setTimeout(()=>{
-    for (const logline of tmpLogs ) {
-        console.log(logline)
-    }
-}, 15000)
 
 // this method is called when need to rewire a test code (.test.js / .test.ts / .spec.js / .spec.ts)
 // content - the text of the test-code (as string)
@@ -264,7 +282,6 @@ setTimeout(()=>{
 //  the write (if need to) add a function __mapLibraries() that calls the describe.mapLibraries with list of all libraries that are needed for this test code 
 //  (used by stub/spy/rewire/etc...), each argument to describe.mapLibries is array of 2 arguments the name of the libraray and call to require of that libraray. 
 function TestCodeRewire(content: string, ___filename: string): string {
-    log(`TestCodeRewire: ${___filename}`)
     // if the content already include a menthon fo __mapLibraries, it is already rewired, so nothing need to be done
     if ( content.indexOf('__mapLibraries') >=0 ) {
         //already rewired
@@ -377,7 +394,6 @@ function TestCodeRewire(content: string, ___filename: string): string {
             if ( j<0 ) return content
             // the text at the start of the line until the above "=" sign, is the name of the class that is decorated with the describe decorator
             const className = content.substring(j,i).trim()
-            log(className)
             // "i" is now set to the index of where that class was defined int he JS test code (long before the decorator)
             i = content.indexOf(`let ${className}`)
             if ( i<0 ) return content
@@ -396,11 +412,6 @@ function TestCodeRewire(content: string, ___filename: string): string {
         mapLibrariesCode += `)}\n`
         // place the definision of the __mapLibraries method in the test-code.
         content = `${content.substring(0,endOfCode)}${mapLibrariesCode}${content.substring(endOfCode)}`
-    }
-    if ( ___filename === '/dist/lib/test/lib.test.js' || ___filename === '/src/test-samples/test/lib.spec.ts') {
-        log(`----------------------------------------${___filename}`)
-        log(content)
-        log('----------------------------------------')
     }
     return content
 }
@@ -546,7 +557,6 @@ export async function init(isKarmaParam = false): Promise<void> {
                 childProcess['fork']['_hooked'] = 'soda-test'
             }
         }
-        log('%%%%%%%%%%%end of rewire.init()')
         // look for already loaded test files
         let firstTestCodeFile: string = null
         const stack = (new Error()).stack
@@ -565,10 +575,8 @@ export async function init(isKarmaParam = false): Promise<void> {
             }
         }
         if ( firstTestCodeFile ) {
-            log(`%%% firstTestCodeFile=${firstTestCodeFile}`)
             // set a default map for this test-code
-            librariesMap[firstTestCodeFile] = { __All : true as never}
-            log(`%%% librariesMap[${JSON.stringify(firstTestCodeFile)}] = ${JSON.stringify(librariesMap[firstTestCodeFile])}`)
+            librariesGetters[firstTestCodeFile] = new LibGetterDefault(firstTestCodeFile)
         }
     }
     // hook Object.defineProeprty
@@ -703,8 +711,6 @@ export async function init(isKarmaParam = false): Promise<void> {
         if ( isNonClassFunction(_module.exports) ) {
             _module.exports = _aggregateFunction(_module.exports)
         }
-        exportsCache[___filename] = _module.exports
-
     }
 
 
@@ -768,144 +774,25 @@ function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration
     return rewireConfiguration
 }
 
-/* delete this method */
-function getTargetBasePath(caller: string, libname: string):{targetBasePath: string, fullPath?: string} {
-    let fullPath: string
-    if ( libname ) {
-        const callerDirName = dirname(caller)
-        fullPath = join(callerDirName, libname)
-    } else {
-        fullPath = caller
-    }
-    let targetBasePath: string
-    // check if we are in webPack
-    const wpStrings = ['/_karma_webpack_/webpack:/', '/_karma_webpack_/', '/webpack:/']
-    let webpackIndex: number
-    let len: number
-    for (const wpString of wpStrings ) {
-        webpackIndex = fullPath.indexOf(wpString)
-        if ( webpackIndex > 0 ) {
-            len = wpString.length
-            break
-        }
-    }
-    if ( webpackIndex>0 ) {
-        targetBasePath = '/' + fullPath.substr(webpackIndex+len)
-    } else {
-        targetBasePath = normalizeFilename(fullPath)
-    }
-    return {targetBasePath, fullPath: (webpackIndex>0)?undefined:fullPath}
-}
-
 // this method returns teh exports of a libraray (just like require)
 // need to pass the original caller file name.
 // can be used from other libraries. the result exports might be rewried
 export function getLibFromPath(libname: string, caller: string, reload = false): Record<string,unknown> {
     // get the name of the library from the librariesMap (incase of webpack we might get a differnt libraray name)
-    if ( !librariesMap[caller] ) {
-        log(`** we don't have librariesMap for ${caller} \n${librariesMap[caller]}`)
-    }
-    const libTargetName = (librariesMap[caller].__All)?libname: librariesMap[caller][libname]
-    // if we got a name for the libaray (that does not start with '.') we should find the libaray in the exports cache
-    if ( libTargetName && !libTargetName.startsWith('.')) {
-        if ( require.cache[libTargetName] && require.cache[libTargetName].exports ) {
-            return require.cache[libTargetName].exports
+    if ( librariesGetters[caller] ) {
+        const _exports =  librariesGetters[caller].getLib(libname)
+        // use the __reload__() method if we have the "reload" flag
+        if ( reload ) {
+            const _module: {exports: Record<string,unknown>} = {exports: {}}
+            if ( !_exports.__reload__(_module as NodeModule,_module.exports) ) {
+                throw new Error(`reloading module is not supported for ${libname}`)
+            }
+            return _module.exports
         }
+        return _exports
     }
-    // in the case of no web-pack we still have the orignal libaray-name, that start with '.' incase of relative path
-    if (libname.startsWith('.')) {
-        // curentRelativePath - shall include the relative path from currentPath to the target path (+ the relative libname)
-        const targetPath = dirname(caller)
-        let currentPath = __dirname
-        let currentRelativePath = ''
-        // going up on "currentPath" until getting to a parent of "targetPath"
-        while ( !targetPath.startsWith(currentPath) ) {
-            const i = currentPath.lastIndexOf(sep)
-            currentPath = currentPath.substring(0,i)
-            // each up folder adding ".." to relative path
-            currentRelativePath = join(currentRelativePath, '..')
-        }
-        // add the folders from targetPath, the are not including in currentPath
-        currentRelativePath = join(currentRelativePath, targetPath.substring(currentPath.length))
-        // add the libraray relative path
-        currentRelativePath = join(currentRelativePath, libname)
-        try {
-            // now we can require the requres library, since the relative path is from current folder
-            const _exports =  require(currentRelativePath)
-            // use the __reload__() method if we have the "reload" flag
-            if ( reload ) {
-                const _module: {exports: Record<string,unknown>} = {exports: {}}
-                if ( !_exports.__reload__(_module as NodeModule,_module.exports) ) {
-                    throw new Error(`reloading module is not supported for ${libname}`)
-                }
-                return _module.exports
-            }
-            return _exports
-        } catch (err) {
-            throw new Error(`could not find libraray ${libname} ${err}`)
-        }
-    }
-    // node_modles lib, just return it
-    try {
-        return require(libname)
-    } catch ( err ) {
-        log('************** could not find the request libraray ***************')
-        log(`libname=${libname}`)
-        log(`libTargetName=${libTargetName}`)
-        log(`caller=${caller}`)
-    
-        if ( err.code === 'MODULE_NOT_FOUND' ) {
-            console.log('** MODULE_NOT_FOUND', libname)
-            // search for the module
-            let theLib: AnExportObject = undefined
-            // seach in exportCache
-            let keys = Object.keys(exportsCache)
-                .filter(path => path.startsWith(`/node_modules/${libname}/`) || path.startsWith(`/node_modules/${libname}-browserify/`))
-                .filter(path => path.indexOf('/node_mdoules/',1)<0)
-            console.log('**', keys)
-            console.log('exportsCache.Count', Object.keys(exportsCache).length)
-            if ( keys.length === 1 ) {
-                theLib = exportsCache[keys[0]]
-            } else {
-                for ( const path of keys ) {
-                    if ( exportsCache[path].___shortname === libname ) {
-                        theLib = exportsCache[path]
-                        console.log('1 - found the lib', path)
-                        break
-                    }
-                }
-                if ( !theLib && keys.length > 0 ) {
-                    console.log('2 - return lib lib out of ', keys.length, keys[keys.length-1])
-                    theLib = exportsCache[keys[keys.length-1]]
-                }
-            }
-            if ( theLib ) return theLib
-            // seach in require.cache
-            keys = Object.keys(require.cache)
-                .filter(path => path.startsWith(`./node_modules/${libname}/`) || path.startsWith(`./node_modules/${libname}-browserify/`))
-                .filter(path => path.indexOf('/node_mdoules/',2)<0)
-            console.log('**', keys)
-            console.log('require.cache.Count', Object.keys(require.cache).length)
-            if ( keys.length === 1 ) {
-                theLib = require.cache[keys[0]].exports
-            } else {
-                for ( const path of keys ) {
-                    console.log('--', path, require.cache[path].exports.___shortname)
-                    if ( require.cache[path].exports.___shortname === libname ) {
-                        theLib = require.cache[path].exports
-                        break
-                    }
-                }
-            }
-            if ( !theLib && keys.length > 0 ) {
-                theLib = require.cache[keys[keys.length-1]].exports
-            }
-            if ( theLib ) return theLib
-        } console.log('should not get here. getting web pack libraray due to not finding ', libname)
-        const lib = getWebPackLibraray(libname, getTargetBasePath(caller,null).targetBasePath)
-        if ( lib ) return lib
-        throw err
-    }
+    throw new Error(`we don't have libraries getters for caller ${caller} - libname = ${libname}`)
+
 }
 
 let _webPackTree: WebPackTree = null
