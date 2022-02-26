@@ -497,47 +497,55 @@ export async function init(isKarmaParam = false): Promise<void> {
             }
         }
     }
-    if ( nodeJsInputFileSystem ) {
-        const _readFileSync: (filename: string, encoding: string) => string | Buffer = nodeJsInputFileSystem['prototype'].readFileSync
+    interface ReadFileSyncApi {
+        readFileSync(filename: string, encoding: string): string | Buffer
+    }
+    interface ReadFileApi {
+        readFile(path: string, encoding: string, callback: (err: NodeJS.ErrnoException | null, data: Buffer) => void): void
+    }
+    // hook a readFileSync method (on target) to call afterReadFileSync after it
+    function hookReadfileSync(target: ReadFileSyncApi): void {
+        const _readFileSync = target.readFileSync
         if ( _readFileSync['_hooked'] === 'soda-test') {
             // already hooked
         } else {
-            nodeJsInputFileSystem['prototype'].readFileSync = function(filename: string, encoding: string): string | Buffer {
+            target.readFileSync = function(filename, encoding) {
                 const result = _readFileSync(filename, encoding)
                 return afterReadFileSync(filename, encoding, result)
             }
+            target.readFileSync['_hooked'] = 'soda-test'
         }
+    }
+    // hook a readFile method (on target) to call afterReadFileSync, before calling its callback method
+    function hookReadFile(target: ReadFileApi): void {
+        const _readFile = target.readFile
+        if ( _readFile['_hooked'] === 'soda-test') {
+            // already hooked
+        } else {
+            target.readFile = function (filename, encoding, callback) {
+                if ( !callback ) {
+                    callback = encoding as never // encoding was not specified
+                    encoding = 'utf8'
+                }
+                _readFile(filename, encoding, (err, data) => {
+                    if ( !err ) {
+                        data = afterReadFileSync(filename, encoding, data) as Buffer
+                    }
+                    callback(err, data)
+                })
+            }
+            target.readFile['_hooked'] = 'soda-test'
+        }
+    }
+    if ( nodeJsInputFileSystem ) {
+        hookReadfileSync(nodeJsInputFileSystem['prototype'])
+        hookReadFile(nodeJsInputFileSystem['prototype'])
     } else {
         if ( fs ) {
             // hook the fs.readFileSync to call method after it
-            const _fs = fs
-            const _readFileSync: (filename: string, encoding: string) => string = fs['readFileSync'] as never
-            if ( _readFileSync['_hooked'] === 'soda-test') {
-                // already hooked
-            } else {
-                _fs['readFileSync'] = function(filename: string, encoding: string): string {
-                    const result: string = _readFileSync(filename, encoding)
-                    return afterReadFileSync(filename, encoding, result) as string
-                }
-                _fs['readFileSync']['_hooked'] = 'soda-test'
-            }
-            const _readFile: (path: string, options: unknown, callback: (err: NodeJS.ErrnoException | null, data: Buffer) => void) => void = fs['readFile'] as never
-            if ( _readFile['_hooked'] === 'soda-test') {
-                // already hooked
-            } else {
-                _fs['readFile'] = function (path: string, options: unknown, callback: (err: NodeJS.ErrnoException | null, data: Buffer) => void): void {
-                    if ( !callback ) {
-                        callback = options as never // options was not specified
-                    }
-                    _readFile(path, options, (err, data) => {
-                        if ( !err ) {
-                            data = afterReadFileSync(path, null, data) as Buffer
-                        }
-                        callback(err, data)
-                    })
-                }
-                _fs['readFile']['_hooked'] = 'soda-test'
-            }
+            const _fs: ReadFileSyncApi & ReadFileApi = fs as never
+            hookReadfileSync(_fs)
+            hookReadFile(_fs)
         }
         if ( childProcess ) {
             // hook the child_process.fork to init rewire on jest chid processes
