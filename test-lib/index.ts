@@ -307,7 +307,7 @@ export function useFakeTimers(config?: number | Date | Partial<SinonFakeTimersCo
 
 }
 
-export interface SinonFakeTimers extends SinonSinonFakeTimers {
+export type SinonFakeTimers = SinonSinonFakeTimers & {
     atick(ms: number | string): Promise<number>
 }
 
