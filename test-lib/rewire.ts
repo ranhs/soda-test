@@ -1,7 +1,8 @@
 import { dirname, join, sep} from './path'
 import { anyFunction } from './executables'
 import { setProperty } from './setProperty'
-import { createReadConfigurationFile, initConfiguration, readConfiguration, readConfigurationFileName, getBaseDir, SodaTestConfiguration, RewireConfiguration } from './configuration'
+import { SodaTestConfiguration, RewireConfiguration } from './configurationtypes'
+import { createReadConfigurationFile, initConfiguration, readConfigurationFile, readConfigurationFileName, getBaseDir } from './configuration'
 
 const excluded_libs = [
     'soda-test',
@@ -87,7 +88,7 @@ try {
 } catch (err) {
     // when using karma, there is no fs
 }
-const _init_configuration = (fs)?readConfiguration(fs):null
+const _init_configuration = readConfigurationFile(fs)
 const _readconfiguration_filename = (fs)?readConfigurationFileName():null
 
 interface Loadable {
@@ -133,13 +134,15 @@ enum RewireType {
     Light,
     Regular,
     TestCode,
-    JestConfigFile
+    JestConfigFile,
+    ReadConfigurationFile
 }
 
 function getRewireType(filename: string): RewireType {
     if ( !filename.endsWith('.js') && !filename.endsWith('.ts') ) return RewireType.None
     if ( filename.endsWith('d.ts') ) return RewireType.None
     if ( isExcludedLib(filename) ) return RewireType.None
+    if ( _readconfiguration_filename && filename === _readconfiguration_filename ) return RewireType.ReadConfigurationFile
     if ( filename.indexOf('node_modules') >= 0 ) return RewireType.Light
     if ( filename.endsWith('.test.js') ) return RewireType.TestCode
     if ( filename.endsWith('.test.ts') ) return RewireType.TestCode
@@ -261,7 +264,10 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
                 content =  `${content}
 /* ${'!f'}!"${___filename}" */`
             }
-        
+            break
+        case RewireType.ReadConfigurationFile:
+            content = createReadConfigurationFile(_init_configuration)
+            break;
     }
 
     // turn content back to buffer if need to
@@ -455,9 +461,6 @@ function normalizeFilename(filename: string): string {
 // if the file loading is a file that need to be rewired, this code patches the answer
 // with the rewire JS code 
 function afterReadFileSync(filename: string, encoding: string, result: string | Buffer): string | Buffer {
-    if (filename === _readconfiguration_filename) {
-        return createReadConfigurationFile(_init_configuration, Buffer.isBuffer(result))
-    } 
     const rewireType = getRewireType(filename)
     if ( rewireType != RewireType.None ) {
         // this file is JS file that is not a test file and is not under node_modules, need to rewire it
@@ -735,12 +738,16 @@ export async function init(isKarmaParam = false): Promise<void> {
     Object['__rewireQueue'] = {
         push: rewireCurrent
     }
-    let config: SodaTestConfiguration = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
-    if ( config.placeholder) {
-        config = readConfiguration(fs)
-    } 
-    initConfiguration(config)
-    rewire_config = rewireConfiguration(config)
+
+    {
+        // load the './configurationdata' file only after rewire is working,
+        // so it shall read the rewired confiugration file
+        const _configuraiton = require('./configurationdata')
+        const readConfiguration = _configuraiton.readConfiguration
+        const config = readConfiguration()
+        initConfiguration(config)
+        rewire_config = rewireConfiguration(config)
+    }
 }
 
 let rewire_config: RewireConfiguration

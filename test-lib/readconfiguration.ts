@@ -1,7 +1,1 @@
-module.exports = JSON.parse(
-`
-{
-    "placeholder": true
-}
-`
-)
+export const placeholder = true
