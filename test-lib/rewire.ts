@@ -742,7 +742,7 @@ export async function init(isKarmaParam = false): Promise<void> {
     {
         // load the './configurationdata' file only after rewire is working,
         // so it shall read the rewired confiugration file
-        const _configuraiton = require('./configurationdata')
+        const _configuraiton = require('./configurationdata') // eslint-disable-line @typescript-eslint/no-var-requires
         const readConfiguration = _configuraiton.readConfiguration
         const config = readConfiguration()
         initConfiguration(config)
