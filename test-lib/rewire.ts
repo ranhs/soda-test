@@ -139,10 +139,10 @@ enum RewireType {
 }
 
 function getRewireType(filename: string): RewireType {
+    if ( _readconfiguration_filename && filename === _readconfiguration_filename ) return RewireType.ReadConfigurationFile
     if ( !filename.endsWith('.js') && !filename.endsWith('.ts') ) return RewireType.None
     if ( filename.endsWith('d.ts') ) return RewireType.None
     if ( isExcludedLib(filename) ) return RewireType.None
-    if ( _readconfiguration_filename && filename === _readconfiguration_filename ) return RewireType.ReadConfigurationFile
     if ( filename.indexOf('node_modules') >= 0 ) return RewireType.Light
     if ( filename.endsWith('.test.js') ) return RewireType.TestCode
     if ( filename.endsWith('.test.ts') ) return RewireType.TestCode
@@ -744,7 +744,11 @@ export async function init(isKarmaParam = false): Promise<void> {
         // so it shall read the rewired confiugration file
         const _configuraiton = require('./configurationdata') // eslint-disable-line @typescript-eslint/no-var-requires
         const readConfiguration = _configuraiton.readConfiguration
-        const config = readConfiguration()
+        let config = readConfiguration()
+        if ( config.placeholder ) {
+            // the 'readconfiguration.js' file was not rewired yet, read configuration directlry from .sodatest file
+            config = readConfigurationFile(fs)
+        }
         initConfiguration(config)
         rewire_config = rewireConfiguration(config)
     }

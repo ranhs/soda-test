@@ -1,5 +1,6 @@
 import { SodaTestConfiguration } from './configurationtypes'
-import * as nativeConfig from './readconfiguration'
+
+let sodaTestConfiguration: SodaTestConfiguration = null
 
 function fillMissingConfiguration(config: SodaTestConfiguration): SodaTestConfiguration {
     if ( !config ) config = {} as never
@@ -23,6 +24,9 @@ function fillMissingConfiguration(config: SodaTestConfiguration): SodaTestConfig
 }
 
 export function readConfiguration(): SodaTestConfiguration {
-    const rv = fillMissingConfiguration(nativeConfig as never)
-    return rv
+    if ( !sodaTestConfiguration ) {
+        const nativeConfig = require('./readconfiguration') // eslint-disable-line @typescript-eslint/no-var-requires
+        sodaTestConfiguration = fillMissingConfiguration(nativeConfig)
+    }
+    return sodaTestConfiguration
 }
