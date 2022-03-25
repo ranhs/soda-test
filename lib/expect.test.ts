@@ -1,6 +1,5 @@
 import { expect, describe, it, SinonSpy, spy, TR, PTR, Done } from '.'
 import { DerivedClass } from './class'
-import { fail } from 'assert'
 
 class A {
     a = 1
@@ -131,7 +130,7 @@ class ExpectTest {
                 clearInterval(timeout)
                 timeout = null as never
                 //done() // should not get here
-                fail('should not get here')
+                expect.fail('should not get here')
             } catch (e) {
                 if ( timeout !== null ) {
                     clearInterval(timeout)

@@ -17,7 +17,6 @@ export {
     TR,
     PTR,
     CreatableClass,
-    assert, 
     before, 
     after, 
     beforeEach, 

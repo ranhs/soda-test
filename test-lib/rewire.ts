@@ -67,14 +67,14 @@ const librariesGetters: Record<string, LibGetter> = {}
 // this methods (defined as describe.mapLibraraies) is called in the test-code by the rewired code with list of libraries the calling test code needs
 // each argument is and array of 2 items: the name of the library and a method calls require on that library.
 // the require call might change by webpack to __webpack_require and the argument may change to the name of the libraray in web-pack
-export function mapLibraries(...libmap : [name: string, reqCall: () => undefined][]): void {
+export function mapLibraries(...libmap : [name: string, reqCall: () => unknown][]): void {
     // get the caller file-name
     const caller = getCallerFileName(1)
     // all that data is saved under the caller filename, so we have the data that is need by each test-code file
     const libGetters = new LibGetterClass()
     librariesGetters[caller] = libGetters
     for (const [name,reqCall] of libmap) {
-        libGetters.addRequireCall(name, reqCall)
+        libGetters.addRequireCall(name, reqCall as ()=>AnExportObject)
     }
 }
 
@@ -135,11 +135,13 @@ enum RewireType {
     Regular,
     TestCode,
     JestConfigFile,
-    ReadConfigurationFile
+    ReadConfigurationFile,
+    superagentTypesFile,
 }
 
 function getRewireType(filename: string): RewireType {
     if ( _readconfiguration_filename && filename === _readconfiguration_filename ) return RewireType.ReadConfigurationFile
+    if ( filename.endsWith('\\superagent\\index.d.ts') || filename.endsWith('/superagent/index.d.ts')) return RewireType.superagentTypesFile
     if ( !filename.endsWith('.js') && !filename.endsWith('.ts') ) return RewireType.None
     if ( filename.endsWith('d.ts') ) return RewireType.None
     if ( isExcludedLib(filename) ) return RewireType.None
@@ -240,18 +242,23 @@ function PatchFileContent(fileContent: string | Buffer, filename: string, rewire
                 }
         
                 content = `${(light)?'':'function __load(module,exports) {'}${content}
-const __rewireArgs = [(exp,value)=>eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}];
-(Object.__rewireQueue = Object.__rewireQueue || []).push(__rewireArgs)
-${varsDefinitions(fileConfiguration)}${mapCode}${(light)?'':`
+{
+    const __rewireArgs = [(exp,value)=>eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}];
+    (Object.__rewireQueue = Object.__rewireQueue || []).push(__rewireArgs)
+}
+${varsDefinitions(fileConfiguration)}${(light)?'':`
 return true;
 }
-__load(module,exports);`}`
+__load(module,exports);`}
+${mapCode}`
             } else if ( filename.endsWith('.ts') ) {
         
                 content = `${(light)?'':'function __load(module: unknown, exports: Record<string, unknown>) {};'}${content}
-const __rewireArgs = [(exp: string, value: unknown): unknown => eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}]
-const __rewireQueue = eval('Object.__rewireQueue = Object.__rewireQueue || []')
-__rewireQueue.push(__rewireArgs)
+{
+    const __rewireArgs = [(exp: string, value: unknown): unknown => eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}]
+    const __rewireQueue = eval('Object.__rewireQueue = Object.__rewireQueue || []')
+    __rewireQueue.push(__rewireArgs)
+}
 ${varsDefinitions(fileConfiguration)}${(light)?'':`
 
 //}
@@ -268,6 +275,8 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
         case RewireType.ReadConfigurationFile:
             content = createReadConfigurationFile(_init_configuration)
             break;
+        case RewireType.superagentTypesFile:
+            content = fixSuperagentTypesFile(content)
     }
 
     // turn content back to buffer if need to
@@ -277,6 +286,12 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
         fileContent = content
     }
 return fileContent
+}
+
+function fixSuperagentTypesFile(content: string): string {
+    content = content.replace('import { Blob } from "buffer";', '')
+    content = content.replace('Blob | Buffer', 'Buffer')
+    return content
 }
 
 
@@ -777,6 +792,7 @@ function toFullPaths(path: string): string[] {
 }
 
 function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration {
+    if ( !config || !config.rewire ) return
     const rewireConfiguration: RewireConfiguration = {
         files: {}
     }

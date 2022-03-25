@@ -1,4 +1,4 @@
-import { it, TR, describe, context, assert, before, after, beforeEach, afterEach, pending, environment } from '..'
+import { it, TR, describe, context, /*assert,*/ expect, before, after, beforeEach, afterEach, pending, environment } from '..'
 
 @describe("files to tested")
 class DescribeClassTest {
@@ -23,7 +23,7 @@ class DescribeClassTest {
 
     @it("should test something")
     test1(): TR {
-        assert.equal(1,1)
+        expect(1).to.equal(1)
         console.log("ENV:", environment.NODE_ENV)
 
         if ( environment.NODE_ENV === "development" ) {
@@ -33,7 +33,7 @@ class DescribeClassTest {
 
     @it("should test something else")
     test2(): TR {
-        assert.deepEqual({name:"joe"}, {name:"joe"})
+        expect({name:"joe"}).to.deep.equal({name:"joe"})
     }
 
 @context("function2 to be tested")

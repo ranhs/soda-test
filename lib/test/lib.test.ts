@@ -2,6 +2,7 @@ import {describe, context, it, TR, expect, spy, stub, SinonSpy, SinonStub, rewir
 import {getCount, setCount, advance, decrement, double, squar, DummyClass, BaseClass} from './lib'
 import {getName, setName} from './lib2'
 
+// argv is not supported on Angular12
 import { run } from 'argv'
 import { isString, isObject, isFunction, floor } from 'lodash'
 
@@ -288,6 +289,7 @@ class TestTest {
         expect(getName()).to.equal('Ran')
     }
 
+    // This test is not working on Angular 12
     @it("should rewire external lib as argument")
     checkRewire3(@rewire('argv') lodashRewire: Rewire): TR {
         let f: (arg: string[]) => string[] = lodashRewire.get('run')
@@ -298,6 +300,7 @@ class TestTest {
         expect(f(['2','3'])).to.deep.equal(['2','3'])
     }
 
+    // This test is not working on Angular 12
     @it("should cancel rewire changes")
     checkRewrie3After(): TR {   
         expect(run(['Ran','Har-Shuv'])).to.deep.equal({targets:["Ran","Har-Shuv"],options:{}})

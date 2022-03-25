@@ -2,7 +2,6 @@ import { spy as sinonSpy, stub as sinonStub, useFakeTimers } from "sinon";
 import { Rewire, getLibRewire, reloadLibRewire } from "./rewire";
 import { SinonInfo, SinonKind, SetStubType } from "./testInfo";
 import { SinonSpy, SinonStub, SinonFakeTimers } from "./index";
-import { isFunction } from "util";
 import { targetType, anyFunction } from "./executables";
 import { setProperty } from "./setProperty";
 
@@ -32,7 +31,7 @@ function setStub(
                 break
             case SetStubType.Access:
                 if ( setStub.value['getter'] ) {
-                    if ( isFunction(setStub.value['getter']) ) {
+                    if ( typeof(setStub.value['getter']) === 'function' ) {
                         stub.get(setStub.value['getter'])
                     } else {
                         stub.get(()=>setStub.value['getter'])

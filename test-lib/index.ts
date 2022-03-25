@@ -4,7 +4,6 @@ import { SinonKind, SetStubType, SinonInfo, getInfo, extraInfo } from "./testInf
 import { TestDescribe, targetType, anyFunction } from "./executables";
 import { getCallerFileName, init as rewireInit, isKarma } from "./rewire"
 export { Rewire, createAggregation } from "./rewire"
-import * as _assert from "assert"
 import { SuperTest, Test } from 'supertest'
 import * as chai from "chai"
 
@@ -16,7 +15,6 @@ import { mapLibraries } from './rewire'
 export { mapLibraries } from './rewire'
 import { createSinon } from "./sinons";
 import testSuite from './testSuite'
-import { isFunction, isString } from "util";
 import { PlanDescribe } from "./testplan";
 import {environment as _env} from './environment'
 export const environment = _env
@@ -25,7 +23,7 @@ export {} from 'chai-as-promised'
 export {} from 'sinon-chai'
 
 
-let _request: (app)=> SuperTest<Test> 
+let _request: (app)=> SuperTest<Test>
 
 const superLib = 'supertest'
 if ( !isKarma ) {
@@ -37,7 +35,6 @@ if ( !isKarma ) {
     }
 }
 
-export const assert = _assert
 export const request = _request
 
 type constractorType = Function // eslint-disable-line @typescript-eslint/ban-types
@@ -202,12 +199,12 @@ export function createStub(stubTarget: string | targetType, methodName: string):
             return sinonStub
         },
         rejects: (err: Error | string): SinonStub => {
-            sinonStub.throws(isString(err)?new Error(err):err)
+            sinonStub.throws((typeof err === 'string')?new Error(err):err)
             return sinonStub
         },
         access: (getter?: (() => unknown) | unknown, setter?: (v: unknown) => void ): SinonStub => {
             if ( getter ) {
-                if ( isFunction(getter) ) {
+                if ( typeof getter === 'function' ) {
                     sinonStub.get(getter as () => unknown)
                 } else {
                     sinonStub.get(()=>getter)
@@ -252,7 +249,7 @@ export function stub(stubTarget: string | targetType = null, methodName: string 
         return result
     }
     result.rejects = (err: Error | string): StubDecorator => {
-        info.setStub = {type: SetStubType.Reject, value: isString(err)?new Error(err):err}
+        info.setStub = {type: SetStubType.Reject, value: (typeof err === 'string')?new Error(err):err}
         return result
     }
     result.access = (getter?: (() => unknown) | unknown, setter?: (v: unknown) => void): StubDecorator => {

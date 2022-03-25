@@ -57,7 +57,6 @@ if ( jest_ ) {
         importPrivate: testLib.importPrivate,
         rewire: testLib.rewire,
         useFakeTimers: testLib.useFakeTimers,
-        assert: testLib.assert,
         sandbox: testLib.sandbox,
         testStep,
         testCase,
@@ -84,7 +83,6 @@ if ( jest_ ) {
         createAgrigation: testLib.createAggregation, // temporaray save wrong spelling for backword competability
         rewire: testLib.rewire,
         expect: testLib.expect,
-        assert: testLib.assert,
         request: testLib.request,
         sandbox: testLib.sandbox,
         testStep,

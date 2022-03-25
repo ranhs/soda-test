@@ -2,6 +2,7 @@ import { describe, SinonStub, stub, it, TR, expect, context, beforeEach } from '
 
 import { createGreeting, isString } from './utils'
 import { secret } from './config'
+import * as _ from 'underscore'
 
 @describe('utils')
 class UtilsTest {
@@ -57,20 +58,32 @@ class UtilsTest {
         expect(this.greeting).to.be.equal('ABC123')
     }
 
-@context('isString')
+@context('isString1')
+    // this method of stubing (for underscore libraray) does not work on Angular 12
     @stub('underscore','isString').returns(true)
-    iStringStub: SinonStub
+    iStringStub1: SinonStub
 
     @it('should call _.isString and return true')
-    isString(): TR {
+    isString1(): TR {
         expect(isString(4)).to.be.true
-        expect(this.iStringStub).to.have.been.calledOnce
+        expect(this.iStringStub1).to.have.been.calledOnce
+    }
+
+@context('isString2')
+    @stub(_,'isString').returns(false)
+    iStringStub2: SinonStub
+
+    @it('should call _.isString and return false')
+    isString2(): TR {
+        expect(isString('text')).to.be.false
+        expect(this.iStringStub2).to.have.been.calledOnce
     }
 
 @context('isString default')
-    @it('should return false when no stub')
-    isString1(): TR {
+    @it('should return true for strings when no stub')
+    isString3(): TR {
         expect(isString(4)).to.be.false
+        expect(isString('text')).to.be.true
     }
 }
 
