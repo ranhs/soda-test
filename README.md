@@ -20,7 +20,10 @@ The syntax of unit test code with soda-test is easy to write and easy to underst
 Soda-test supports unit-test for frontend as well as for backend, with the same syntax.<br>  
 Furthermore, soda-test gives you a framework for writing your API test.
 </p>
-
+<p>
+<font size="+1" color="Red"><b>And now, Soda-Test supports Angular12.</b></font><br>
+<font color="Red">(Angular13 will soon be supported too)</font>
+</p>
 <br><br>
 <h2 name="Installation">Installation</h2>
 
