@@ -2,11 +2,12 @@
     "$schema": "../@angular-devkit/architect/src/builders-schema.json",
     "builders": {
         "karma": {
-            "#implementation": "../@angular-devkit/build-angular/src/karma",
+            "#implementation": "../@angular-devkit/build-angular/src/builders/karma",
             "implementation": "./dist/build-angular/karma",
             "#class": "../@angular-devkit/build-angular/src/karma",
             "class": "./dist/build-angular/karma",
-            "schema": "../@angular-devkit/build-angular/src/karma/schema.json",
+            "schema": "../@angular-devkit/build-angular/src/builders/karma/schema.json",
+            "schemaOld": "../@angular-devkit/build-angular/src/karma/schema.json",
             "description": "Run Karma unit tests."
           }      
     }
