@@ -134,5 +134,15 @@ The following GitHub repositories holds sample codes for soda-test:
 <ul>
 <li><a href="https://github.com/ranhs/soda-test-mocha-samples">soda-test-mocha-samples</a></li>
 <li><a href="https://github.com/ranhs/soda-test-jest-samples.git">soda-test-jest-samples</a></li>
-<li><a href="https://github.com/ranhs/soda-test-karma-samples.git">soda-test-karma-samples</a></li>
+<li><a href="https://github.com/ranhs/soda-test-karma-samples.git">soda-test-karma-samples</a><br>
+    Branches:
+    <ul>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/anglar7">anglar7</a> - Angular7 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular10">angular10</a> - Angular10 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular11">angular11</a> - Angular11 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular12">angular12</a> - Angular12 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/main">main</a> - Angular12 sample project</li>
+    </ul>
+</li>
+
 </ul>
