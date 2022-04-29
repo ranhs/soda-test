@@ -81,12 +81,17 @@ export function mapLibraries(...libmap : [name: string, reqCall: () => unknown][
 export let isKarma = false
 
 let fs: unknown
+let fs2: unknown
 let nodeJsInputFileSystem: unknown
 let childProcess: unknown
 try {
     fs = require('fs')
 } catch (err) {
     // when using karma, there is no fs
+}
+try {
+    fs2 = require('graceful-fs')
+} catch {
 }
 const _init_configuration = readConfigurationFile(fs)
 const _readconfiguration_filename = (fs)?readConfigurationFileName():null
@@ -135,13 +140,11 @@ enum RewireType {
     Regular,
     TestCode,
     JestConfigFile,
-    ReadConfigurationFile,
-    superagentTypesFile,
+    ReadConfigurationFile
 }
 
 function getRewireType(filename: string): RewireType {
     if ( _readconfiguration_filename && filename === _readconfiguration_filename ) return RewireType.ReadConfigurationFile
-    if ( filename.endsWith('\\superagent\\index.d.ts') || filename.endsWith('/superagent/index.d.ts')) return RewireType.superagentTypesFile
     if ( !filename.endsWith('.js') && !filename.endsWith('.ts') ) return RewireType.None
     if ( filename.endsWith('d.ts') ) return RewireType.None
     if ( isExcludedLib(filename) ) return RewireType.None
@@ -275,8 +278,6 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
         case RewireType.ReadConfigurationFile:
             content = createReadConfigurationFile(_init_configuration)
             break;
-        case RewireType.superagentTypesFile:
-            content = fixSuperagentTypesFile(content)
     }
 
     // turn content back to buffer if need to
@@ -286,12 +287,6 @@ ${varsDefinitions(fileConfiguration)}${(light)?'':`
         fileContent = content
     }
 return fileContent
-}
-
-function fixSuperagentTypesFile(content: string): string {
-    content = content.replace('import { Blob } from "buffer";', '')
-    content = content.replace('Blob | Buffer', 'Buffer')
-    return content
 }
 
 
@@ -518,21 +513,49 @@ export async function init(isKarmaParam = false): Promise<void> {
     interface ReadFileSyncApi {
         readFileSync(filename: string, encoding: string): string | Buffer
     }
+    interface ProvideSyncApi {
+        provideSync(filename: string, encoding: string): string | Buffer
+    }
     interface ReadFileApi {
         readFile(path: string, encoding: string, callback: (err: NodeJS.ErrnoException | null, data: Buffer) => void): void
     }
-    // hook a readFileSync method (on target) to call afterReadFileSync after it
-    function hookReadfileSync(target: ReadFileSyncApi): void {
-        const _readFileSync = target.readFileSync
-        if ( _readFileSync['_hooked'] === 'soda-test') {
+    interface FileSystemApi {
+        readFileSync(filename: string, encoding: string): string | Buffer;
+        openSync(path: string, flags: number, mode?: number | null): number;
+        readSync(fd: number, buffer: NodeJS.ArrayBufferView, offset: number, length: number, position: number | null): number;
+        closeSync(fd: number): void;
+    }
+
+    function hookMethod<T>(target: T, name: string, callback: (org: T) => T) {
+        const org: T = {} as T
+        org[name] = target[name]
+        if (org[name]['_hooked'] === 'soda-test') {
             // already hooked
         } else {
-            target.readFileSync = function(filename, encoding) {
-                const result = _readFileSync(filename, encoding)
-                return afterReadFileSync(filename, encoding, result)
-            }
-            target.readFileSync['_hooked'] = 'soda-test'
+            target[name] = callback(org)[name]
+            target[name]['_hooked'] = 'soda-test'
         }
+    }
+
+    function hookReadFileSync(target: ReadFileSyncApi): void {
+        hookMethod<ReadFileSyncApi>(target, 'readFileSync', (org) => {
+            return {
+                readFileSync: (filename, encoding) => {
+                    const result = org.readFileSync(filename, encoding)
+                    return afterReadFileSync(filename, encoding, result)
+                }
+            }
+        })
+    }
+    function hookProvideSync(target: ProvideSyncApi): void {
+        hookMethod<ProvideSyncApi>(target, 'readFileSync', (org) => {
+            return {
+                provideSync: (filename, encoding) => {
+                    const result = org.provideSync(filename, encoding)
+                    return afterReadFileSync(filename, encoding, result)
+                }
+            }
+        })
     }
     // hook a readFile method (on target) to call afterReadFileSync, before calling its callback method
     function hookReadFile(target: ReadFileApi): void {
@@ -556,14 +579,25 @@ export async function init(isKarmaParam = false): Promise<void> {
         }
     }
     if ( nodeJsInputFileSystem ) {
-        hookReadfileSync(nodeJsInputFileSystem['prototype'])
+        hookReadFileSync(nodeJsInputFileSystem['prototype'])
         hookReadFile(nodeJsInputFileSystem['prototype'])
     } else {
         if ( fs ) {
             // hook the fs.readFileSync to call method after it
-            const _fs: ReadFileSyncApi & ReadFileApi = fs as never
-            hookReadfileSync(_fs)
+            const _fs: ReadFileApi & FileSystemApi = fs as never
+            hookReadFileSync(_fs)
             hookReadFile(_fs)
+            if ( fs2 ) {
+                const _fs2: ReadFileApi & ReadFileSyncApi = fs2 as never
+                hookReadFileSync(_fs2)
+                // hook provideSync on CachedInputFileSystem (angular 13)
+                try {
+                    const CachedInputFileSystem = require('enhanced-resolve/lib/CachedInputFileSystem.js')
+                    const fileSystem = new CachedInputFileSystem(_fs2, 6000);
+                    const CacheBackendPrototype: ProvideSyncApi = Object.getPrototypeOf(fileSystem._readFileBackend)
+                    hookProvideSync(CacheBackendPrototype)
+                } catch {}
+            }
         }
         if ( childProcess ) {
             // hook the child_process.fork to init rewire on jest chid processes
@@ -764,14 +798,16 @@ export async function init(isKarmaParam = false): Promise<void> {
             // the 'readconfiguration.js' file was not rewired yet, read configuration directlry from .sodatest file
             config = readConfigurationFile(fs)
         }
-        initConfiguration(config)
-        rewire_config = rewireConfiguration(config)
+        if ( config !== null ) {
+            initConfiguration(config)
+            rewire_config = rewireConfiguration(config)
+        }
     }
 }
 
 let rewire_config: RewireConfiguration
 const basePath = getBaseDir()
-const distPath = join(basePath, 'dist')
+const distPath = basePath?join(basePath, 'dist'):null
 
 function toFullPaths(path: string): string[] {
     path = path.replace('/', sep)

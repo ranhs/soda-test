@@ -2,11 +2,18 @@ import { SodaTestConfiguration } from './configurationtypes'
 import { environment } from './environment'
 import { join, sep } from '../path'
 
+let ___dirname: string
+try {
+    ___dirname = eval('__dirname')
+} catch {
+    ___dirname = null
+}
 
 export function getBaseDir(): string {
-    let i = __dirname.indexOf(`${sep}node_modules${sep}`)
+    if ( !___dirname ) return null
+    let i = ___dirname.indexOf(`${sep}node_modules${sep}`)
     if ( i < 0 ) {
-        i = __dirname.indexOf(`${sep}soda-test${sep}`)
+        i = ___dirname.indexOf(`${sep}soda-test${sep}`)
         if ( i>=0 ) {
             i+= 11
         }
@@ -14,7 +21,7 @@ export function getBaseDir(): string {
     if ( i< 0) {
         return ''
     }
-    return __dirname.substr(0,i)
+    return ___dirname.substring(0,i)
 }
 
 export function readConfigurationFile(fs: unknown): SodaTestConfiguration {
@@ -39,7 +46,7 @@ export function readConfigurationFile(fs: unknown): SodaTestConfiguration {
 }
 
 export function readConfigurationFileName(): string {
-    return join(__dirname, 'readconfiguration.js')
+    return join(___dirname, 'readconfiguration.js')
 }
 
 export function createReadConfigurationFile(config: unknown): string {
