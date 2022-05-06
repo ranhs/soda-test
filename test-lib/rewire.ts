@@ -90,7 +90,8 @@ try {
     // when using karma, there is no fs
 }
 try {
-    fs2 = require('graceful-fs')
+    const GFS = 'graceful-fs'
+    fs2 = require(GFS)
 } catch {
 }
 const _init_configuration = readConfigurationFile(fs)
