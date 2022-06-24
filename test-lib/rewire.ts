@@ -4,6 +4,7 @@ import { setProperty } from './setProperty'
 import { SodaTestConfiguration, RewireConfiguration } from './configurationtypes'
 import { createReadConfigurationFile, initConfiguration, readConfigurationFile, readConfigurationFileName, getBaseDir } from './configuration'
 
+
 const excluded_libs = [
     'soda-test',
     'webpack',
@@ -518,7 +519,7 @@ export async function init(isKarmaParam = false): Promise<void> {
         provideSync(filename: string, encoding: string): string | Buffer
     }
     interface ReadFileApi {
-        readFile(path: string, encoding: string, callback: (err: NodeJS.ErrnoException | null, data: Buffer) => void): void
+        readFile(path: string, encoding: string, callback?: (err: NodeJS.ErrnoException | null, data: Buffer) => void): void
     }
     interface FileSystemApi {
         readFileSync(filename: string, encoding: string): string | Buffer;
@@ -565,16 +566,17 @@ export async function init(isKarmaParam = false): Promise<void> {
             // already hooked
         } else {
             target.readFile = function (filename, encoding, callback) {
-                if ( !callback ) {
-                    callback = encoding as never // encoding was not specified
-                    encoding = 'utf8'
-                }
-                _readFile(filename, encoding, (err, data) => {
+                const newCallback: (err: NodeJS.ErrnoException, data: Buffer)=>void = (err, data): void => {
                     if ( !err ) {
-                        data = afterReadFileSync(filename, encoding, data) as Buffer
+                        data = afterReadFileSync(filename, (callback)?encoding:'utf8', data) as Buffer
                     }
-                    callback(err, data)
-                })
+                    (callback || encoding as never)(err, data)
+                }
+                if ( !callback ) {
+                    _readFile(filename, newCallback as never)
+                } else {
+                    _readFile(filename, encoding, newCallback)
+                }
             }
             target.readFile['_hooked'] = 'soda-test'
         }
@@ -591,6 +593,7 @@ export async function init(isKarmaParam = false): Promise<void> {
             if ( fs2 ) {
                 const _fs2: ReadFileApi & ReadFileSyncApi = fs2 as never
                 hookReadFileSync(_fs2)
+                hookReadFile(_fs2)
                 // hook provideSync on CachedInputFileSystem (angular 13)
                 try {
                     const CachedInputFileSystem = require('enhanced-resolve/lib/CachedInputFileSystem.js')
@@ -829,7 +832,7 @@ function toFullPaths(path: string): string[] {
 }
 
 function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration {
-    if ( !config || !config.rewire ) return
+    if ( !config || !config.rewire || !distPath ) return
     const rewireConfiguration: RewireConfiguration = {
         files: {}
     }

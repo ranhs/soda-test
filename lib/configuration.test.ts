@@ -20,11 +20,11 @@ class ConfigurationTest {
 
     _savedDirname:  unknown
     beforeEach() {
-        this._savedDirname = configuration.get('__dirname')
+        this._savedDirname = configuration.get('___dirname')
     }
 
     afterEach() {
-        configuration.set('__dirname', this._savedDirname)
+        configuration.set('___dirname', this._savedDirname)
     }
 
     @it('should have the enviroment from the "real" config file')
@@ -65,9 +65,9 @@ class ConfigurationTest {
         expect(config).to.deep.equal(emptyConfiguration)
     }
 
-    @it('should return empty configuration if __dirname does not contains node_modules or soda-test')
+    @it('should return empty configuration if ___dirname does not contains node_modules or soda-test')
     readConfiguration2(): TR {
-        configuration.set('__dirname', join("C:","Kuku","configuration.js"))
+        configuration.set('___dirname', join("C:","Kuku","configuration.js"))
         const nullconfig = configuration.readConfigurationFile(this.fs())
         expect(nullconfig).to.be.null
         expect(this.existsSyncStub).to.not.have.been.called
@@ -75,7 +75,7 @@ class ConfigurationTest {
 
     @it('should look for .sodaTest before node_modules')
     readConfiugration3(): TR {
-        configuration.set('__dirname', join("C:","Kuku", "node_modules", "soda-test", "dist", "test-lib", "configuration.js"))
+        configuration.set('___dirname', join("C:","Kuku", "node_modules", "soda-test", "dist", "test-lib", "configuration.js"))
         const nullconfig = configuration.readConfigurationFile(this.fs())
         expect(nullconfig).to.be.null
         const filename =  join("C:", "Kuku", ".soda-test")
@@ -85,7 +85,7 @@ class ConfigurationTest {
 
     @it('should look for .sodaTest after soda-test')
     readConfiugration4(): TR {
-        configuration.set('__dirname', join("C:","soda-test", "dist", "test-lib", "configuration.js"))
+        configuration.set('___dirname', join("C:","soda-test", "dist", "test-lib", "configuration.js"))
         const nullconfig = configuration.readConfigurationFile(this.fs())
         expect(nullconfig).to.be.null
         const filename =  join("C:", "soda-test", ".soda-test")
@@ -95,7 +95,7 @@ class ConfigurationTest {
 
     @it('should look for .sodaTest after soda-test (exception)')
     readConfiugration5(): TR {
-        configuration.set('__dirname', join("C:","soda-test", "dist", "test-lib", "configuration.js"))
+        configuration.set('___dirname', join("C:","soda-test", "dist", "test-lib", "configuration.js"))
         this.existsSyncStub.callsFake(()=> {throw new Error("Dummy Error")})      
         const nullconfig = configuration.readConfigurationFile(this.fs())
         expect(nullconfig).to.be.null
@@ -106,7 +106,7 @@ class ConfigurationTest {
 
     @it('should read exiting configuration')
     readConfiugration6(): TR {
-        configuration.set('__dirname', join("C:","soda-test", "dist", "test-lib", "configuration.js"))
+        configuration.set('___dirname', join("C:","soda-test", "dist", "test-lib", "configuration.js"))
         this.existsSyncStub.returns(true);  
         const readconfig = configuration.readConfigurationFile(this.fs())
         const filename =  join("C:", "soda-test", ".soda-test")
