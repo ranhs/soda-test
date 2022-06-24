@@ -1,4 +1,4 @@
-import { it, TR, describe, context, /*assert,*/ expect, before, after, beforeEach, afterEach, pending, environment } from '..'
+import { it, TR, describe, context, expect, before, after, beforeEach, afterEach, pending, environment } from '..'
 
 @describe("files to tested")
 class DescribeClassTest {
