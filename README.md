@@ -21,8 +21,7 @@ Soda-test supports unit-test for frontend as well as for backend, with the same 
 Furthermore, soda-test gives you a framework for writing your API test.
 </p>
 <p>
-<font size="+1" color="Red"><b>And now, Soda-Test supports Angular12.</b></font><br>
-<font color="Red">(Angular13 will soon be supported too)</font>
+<font size="+1" color="Red"><b>And now, Soda-Test supports Angular13 and Angular14.</b></font><br>
 </p>
 <br><br>
 <h2 name="Installation">Installation</h2>
@@ -141,7 +140,8 @@ The following GitHub repositories holds sample codes for soda-test:
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular10">angular10</a> - Angular10 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular11">angular11</a> - Angular11 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular12">angular12</a> - Angular12 sample project</li>
-    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/main">main</a> - Angular12 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular13">angular13</a> - Angular13 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/main">main</a> - Angular14 sample project</li>
     </ul>
 </li>
 
