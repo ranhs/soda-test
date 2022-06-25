@@ -596,7 +596,7 @@ export async function init(isKarmaParam = false): Promise<void> {
                 hookReadFile(_fs2)
                 // hook provideSync on CachedInputFileSystem (angular 13)
                 try {
-                    const CachedInputFileSystem = require('enhanced-resolve/lib/CachedInputFileSystem.js')
+                    const CachedInputFileSystem = require('enhanced-resolve/lib/CachedInputFileSystem.js') // eslint-disable-line @typescript-eslint/no-var-requires
                     const fileSystem = new CachedInputFileSystem(_fs2, 6000);
                     const CacheBackendPrototype: ProvideSyncApi = Object.getPrototypeOf(fileSystem._readFileBackend)
                     hookProvideSync(CacheBackendPrototype)
