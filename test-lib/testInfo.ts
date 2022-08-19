@@ -1,4 +1,4 @@
-import { SinonFakeTimersConfig } from 'sinon'
+import { FakeTimerInstallOpts } from '@sinonjs/fake-timers'
 import { targetType, anyFunction } from './executables'
 import { factoryMethod } from './testCase'
 
@@ -43,7 +43,7 @@ export interface SinonInfo {
     memberMethod?: string, // incase of class, this is the name of the method in the class
     kind: SinonKind,
     setStub?: { type: SetStubType, value: unknown },
-    timersConfig?: number | Date | Partial<SinonFakeTimersConfig>
+    timersConfig?: number | Date | Partial<FakeTimerInstallOpts>
     context: string
     global?: boolean
 }

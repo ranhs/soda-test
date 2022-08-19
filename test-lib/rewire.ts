@@ -610,10 +610,9 @@ export async function init(isKarmaParam = false): Promise<void> {
                 // already hooked
             } else {
                 childProcess['fork'] = function(modulePath: string, args?: ReadonlyArray<string>, options?: unknown): unknown {
-                    const i = __dirname.indexOf('node_modules')
-                    const s = __dirname[i-1]
-                    if ( modulePath ===`${__dirname.substr(0,i)}node_modules${s}jest-worker${s}build${s}workers${s}processChild.js`) {
-                        modulePath = `${__dirname}${s}processChild.js`
+                    if ( modulePath.endsWith(join('node_modules', 'jest-worker', 'build', 'workers', 'processChild.js'))) {
+                        options['env'].modulePath = modulePath
+                        modulePath = join(__dirname, 'processChild.js')
                     }
                     return _fork(modulePath, args, options)
                 }
@@ -852,9 +851,49 @@ function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration
 // need to pass the original caller file name.
 // can be used from other libraries. the result exports might be rewried
 export function getLibFromPath(libname: string, caller: string, reload = false): Record<string,unknown> {
+    
     // get the name of the library from the librariesMap (incase of webpack we might get a differnt libraray name)
+    let _exports: AnExportObject
     if ( librariesGetters[caller] ) {
-        const _exports =  librariesGetters[caller].getLib(libname)
+        _exports =  librariesGetters[caller].getLib(libname)
+    }
+    let currentLibPath = libname
+    if ( !_exports ) {
+        console.warn(`we don't have libraries getters for caller ${caller} - libname = ${libname}`)
+        // try getting the library by requring it.
+        // if the path is relative we need to fix the relative path to be from current path        
+        if ( currentLibPath.startsWith('.')) {
+            // curentRelativePath - shall include the relative path from currentPath to the target path (+ the relative libname)
+            const targetPath = dirname(caller)
+            let currentPath = __dirname
+            let currentRelativePath = ''
+            // going up on "currentPath" until getting to a parent of "targetPath"
+            while ( !targetPath.startsWith(currentPath) ) {
+                const i = currentPath.lastIndexOf(sep)
+                currentPath = currentPath.substring(0,i)
+                // each up folder adding ".." to relative path
+                currentRelativePath = join(currentRelativePath, '..')
+            }
+            // add the folders from targetPath, the are not including in currentPath
+            currentRelativePath = join(currentRelativePath, targetPath.substring(currentPath.length))
+            // add the libraray relative path
+            currentRelativePath = join(currentRelativePath, currentLibPath)
+            // we calculated the new current lib path
+            currentLibPath = currentRelativePath
+        }
+        // now we have absolute path, or fixed relative path, try to requrie the lib
+        try {
+            // we can require the requres library, since it has abolute path (in node_modules)
+            _exports =  require(currentLibPath)
+        }
+        catch (err)
+        {
+            throw new Error(`could not find libraray ${libname} ${err}`)
+        }
+    }
+
+    if (_exports) 
+    {
         // use the __reload__() method if we have the "reload" flag
         if ( reload ) {
             const _module: {exports: Record<string,unknown>} = {exports: {}}
@@ -865,8 +904,7 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
         }
         return _exports
     }
-    throw new Error(`we don't have libraries getters for caller ${caller} - libname = ${libname}`)
-
+    throw new Error(`could not find libaray ${libname} (currentLibPath=${currentLibPath})`)
 }
 
 export interface Rewire {

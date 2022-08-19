@@ -9,8 +9,9 @@ import * as chai from "chai"
 
 import * as chaiAsPromised from 'chai-as-promised'
 import * as sinonChai from 'sinon-chai'
-import { SinonStub as SinonSinonStub, SinonSpy as SinonSinonSpy, SinonFakeTimersConfig, SinonFakeTimers as SinonSinonFakeTimers } from 'sinon'
-export { SinonFakeTimersConfig } from 'sinon'
+import { SinonStub as SinonSinonStub, SinonSpy as SinonSinonSpy, SinonFakeTimers as SinonSinonFakeTimers } from 'sinon'
+import { FakeTimerInstallOpts } from "@sinonjs/fake-timers"
+export { FakeTimerInstallOpts } from '@sinonjs/fake-timers'
 import { mapLibraries } from './rewire'
 export { mapLibraries } from './rewire'
 import { createSinon } from "./sinons";
@@ -289,7 +290,7 @@ export function importPrivate(libName: string, methodName?: string): argumentDec
     }
 }
 
-export function useFakeTimers(config?: number | Date | Partial<SinonFakeTimersConfig>): argumentDecorator {
+export function useFakeTimers(config?: number | Date | Partial<FakeTimerInstallOpts>): argumentDecorator {
     const caller = getCallerFileName(1)
     return (target: targetType, propertyKey: string | symbol, parameterIndex?: number): void => {
         getInfo(target).addSinon(propertyKey as string, parameterIndex, {

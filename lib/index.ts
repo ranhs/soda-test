@@ -10,7 +10,7 @@ export {
     SinonStub,
     SinonSandbox,
     SinonFakeTimers,
-    SinonFakeTimersConfig,
+    FakeTimerInstallOpts,
     Done,
     rewire,
     Rewire,
