@@ -610,10 +610,9 @@ export async function init(isKarmaParam = false): Promise<void> {
                 // already hooked
             } else {
                 childProcess['fork'] = function(modulePath: string, args?: ReadonlyArray<string>, options?: unknown): unknown {
-                    const i = __dirname.indexOf('node_modules')
-                    const s = __dirname[i-1]
-                    if ( modulePath ===`${__dirname.substr(0,i)}node_modules${s}jest-worker${s}build${s}workers${s}processChild.js`) {
-                        modulePath = `${__dirname}${s}processChild.js`
+                    if ( modulePath.endsWith(join('node_modules', 'jest-worker', 'build', 'workers', 'processChild.js'))) {
+                        options['env'].modulePath = modulePath
+                        modulePath = join(__dirname, 'processChild.js')
                     }
                     return _fork(modulePath, args, options)
                 }

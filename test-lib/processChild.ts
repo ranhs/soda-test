@@ -1,4 +1,4 @@
 import { init } from './rewire'
 init()
 
-require('jest-worker/processChild')
+require(process.env.modulePath)
