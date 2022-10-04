@@ -21,7 +21,7 @@ class UserModelsTest {
             name: 'foo',
             email: 'foo@bar.com',
             age: 35
-        })
+        } as never)
 
         expect(user).to.have.property('age').to.equal(35)
         expect(user).to.have.property('name').to.equal('foo')
@@ -33,7 +33,7 @@ class UserModelsTest {
         const user = new User({
             name: 'foo',
             email: 'foo@bar.com'
-        })
+        } as never)
 
         expect(user.age).to.not.exist
         expect(user).to.have.property('name').to.equal('foo')

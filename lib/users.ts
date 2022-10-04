@@ -35,7 +35,7 @@ export function createUser(data: UserInterface): Promise<{message: string,userId
         return Promise.reject(new Error('Ivalid arguments'))
     }
 
-    const user = new User(data)
+    const user = new User(data as never)
 
     // console.log('user', user)
 

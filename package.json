@@ -96,6 +96,8 @@
     "dist/test-lib",
     "dist/build-angular",
     "dist/index.*",
+    "dist/path.js",
+    "dist/plan.js",
     "path.js",
     "jest.js",
     "builders.json",

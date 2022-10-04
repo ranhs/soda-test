@@ -847,9 +847,16 @@ function reloadLibraray(_exports: AnExportObject): AnExportObject {
     if (libName === null) return null
     let backupEntry = require.cache[libName]
     delete require.cache[libName]
-    // TOTO sothing else on angular
-    let reloadedlib = require(libName)
-    // restore the original
+    // Build the "require(libName)" command:
+    const requireLibFunc = ()=>/*S*/require(libName);
+    let requireCommand = requireLibFunc.toString();
+    requireCommand = requireCommand.substring(requireCommand.indexOf('/*S*/')+5)
+    requireCommand = requireCommand.substring(0, requireCommand.indexOf('('))
+    requireCommand += "(libName)"
+    console.log('requireCommand', requireCommand)
+    // run the require command
+    let reloadedlib = eval(requireCommand)
+    // restore the original cache entry
     require.cache[libName] = backupEntry
     return reloadedlib
 }
@@ -901,7 +908,6 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
 
     if (_exports) 
     {
-        // TODO: read the libraray again after removing it from cache
         if ( reload ) {
             const _reloadExports = reloadLibraray(_exports)
             if ( !_reloadExports)
@@ -1023,15 +1029,20 @@ export function reloadLibRewire(libname: string, caller: string): Rewire {
         const libOriginal: Record<string,unknown> = getLibFromPath(libname, caller, false)
         const libReloaded: Record<string,unknown> = getLibFromPath(libname, caller, true)
         const rewire = new LibRewire(libReloaded)
-        const libBackup: Record<string,unknown> = {}
+        const libBackup: Record<string,PropertyDescriptor> = {}
         for ( const key in libOriginal ) {
-            libBackup[key] = libOriginal[key]
-            libOriginal[key] = libReloaded[key]
+            libBackup[key] = Object.getOwnPropertyDescriptor(libOriginal,key)
+            Object.defineProperty(libOriginal, key, {
+                get: () => libReloaded[key],
+                set: (value) => libReloaded[key]=value,
+                enumerable: true,
+                configurable: true
+            })
         }
         const restore = rewire.restore
         rewire.restore = (): void => {
             for ( const key in libBackup ) {
-                libOriginal[key] = libBackup[key]
+                Object.defineProperty(libOriginal, key, libBackup[key])
             }
             if ( restore ) restore.bind(rewire)()
             if ( libReloaded['__restore'] ) (libReloaded['__restore'] as () => void)()
