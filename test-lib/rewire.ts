@@ -98,11 +98,7 @@ try {
 const _init_configuration = readConfigurationFile(fs)
 const _readconfiguration_filename = (fs)?readConfigurationFileName():null
 
-interface Loadable {
-    __reload__(module: NodeModule, exports: Record<string,unknown>): boolean
-}
-
-interface AnExportObject extends Loadable, Record<string, unknown> {
+interface AnExportObject extends Record<string, unknown> {
 }
 
 try {
@@ -246,28 +242,22 @@ function PatchFileContent(fileContent: string | Buffer, filename: string, rewire
                     content = content.substr(0, i)
                 }
         
-                content = `${(light)?'':'function __load(module,exports) {'}${content}
+                content = `${content}
 {
     const __rewireArgs = [(exp,value)=>eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}];
     (Object.__rewireQueue = Object.__rewireQueue || []).push(__rewireArgs)
 }
-${varsDefinitions(fileConfiguration)}${(light)?'':`
-return true;
-}
-__load(module,exports);`}
+${varsDefinitions(fileConfiguration)}
 ${mapCode}`
             } else if ( filename.endsWith('.ts') ) {
         
-                content = `${(light)?'':'function __load(module: unknown, exports: Record<string, unknown>) {};'}${content}
+                content = `${content}
 {
     const __rewireArgs = [(exp: string, value: unknown): unknown => eval(exp),${light},${JSON.stringify(___filename)},${JSON.stringify(shortName)}]
     const __rewireQueue = eval('Object.__rewireQueue = Object.__rewireQueue || []')
     __rewireQueue.push(__rewireArgs)
 }
-${varsDefinitions(fileConfiguration)}${(light)?'':`
-
-//}
-//__load(module,exports)`}`
+${varsDefinitions(fileConfiguration)}`
             }
             break
         case RewireType.TestCode:
@@ -753,8 +743,6 @@ export async function init(isKarmaParam = false): Promise<void> {
         if ( !_module ) {
             return
         }
-        let __load: (module: NodeModule, exports: Record<string,unknown>) => boolean = undefined
-        if ( !light ) __load = _get('__load') as never
         if ( !light ) {
             _module.exports.__set__ = function(name: string, value: unknown) {
                 _eval(`${name} = value`, value)
@@ -762,7 +750,6 @@ export async function init(isKarmaParam = false): Promise<void> {
             _module.exports.__get__ = function(name: string) {
                 return _eval(name, undefined)
             }
-            _module.exports.__reload__ = __load
         }
     
         if ( shortName ) {
@@ -847,6 +834,26 @@ function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration
     return rewireConfiguration
 }
 
+// reload a load libray, and restore the original one
+function reloadLibraray(_exports: AnExportObject): AnExportObject {
+    // find the libraray
+    let libName: string = null
+    for (let name of Object.keys(require.cache)) {
+        if ( require.cache[name].exports === _exports ) {
+            libName = name
+            break
+        }
+    }
+    if (libName === null) return null
+    let backupEntry = require.cache[libName]
+    delete require.cache[libName]
+    // TOTO sothing else on angular
+    let reloadedlib = require(libName)
+    // restore the original
+    require.cache[libName] = backupEntry
+    return reloadedlib
+}
+
 // this method returns teh exports of a libraray (just like require)
 // need to pass the original caller file name.
 // can be used from other libraries. the result exports might be rewried
@@ -894,13 +901,12 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
 
     if (_exports) 
     {
-        // use the __reload__() method if we have the "reload" flag
+        // TODO: read the libraray again after removing it from cache
         if ( reload ) {
-            const _module: {exports: Record<string,unknown>} = {exports: {}}
-            if ( !_exports.__reload__(_module as NodeModule,_module.exports) ) {
+            const _reloadExports = reloadLibraray(_exports)
+            if ( !_reloadExports)
                 throw new Error(`reloading module is not supported for ${libname}`)
-            }
-            return _module.exports
+            return _reloadExports
         }
         return _exports
     }
