@@ -8,14 +8,14 @@
 <p align=left>
 This package is easiest way to write unit-test.<br>
 We have gathered all the features you need from various packages, enhance them, and put them all into one, easy to use package.<br>
-You can learn to write unit test using soda-test package by going over soda-test documentation or the soda-test videos.<br>
+You can learn to write unit test using soda-test package by going over soda-test documentation.<br>
 Write your unit-tests using typescript, with classes, decorators and promises.<br>
 Use the "spies" and "stubs" of the sinon package, but with soda-test easy to use syntax.
 No need to worry about cleanups, soda-test package do this for you.<br>
 Your tests are defined as functions in a class, and not as endless nested call-backs.<br>
 When writing unit-tests you may encounter the need to access or stub private or hidden function, stub middleware, avoid your code from accessing external packages that may access the web or databases.
 Doing that and other cases, with the traditional test packages, may be very difficult, if possible at all.
-Soda-test solves those issues the easy way, in some cases with you even knowing about those difficulties, and without the need to change your product code.<br> 
+Soda-test solves those issues the easy way, in some cases without you even knowing about those difficulties, and without the need to change your product code.<br> 
 The syntax of unit test code with soda-test is easy to write and easy to understand.<br>
 Soda-test supports unit-test for frontend as well as for backend, with the same syntax.<br>  
 Furthermore, soda-test gives you a framework for writing your API test.
@@ -132,11 +132,10 @@ Following are all the pages available in GitHub wiki:<br>
 The following GitHub repositories holds sample codes for soda-test:
 <ul>
 <li><a href="https://github.com/ranhs/soda-test-mocha-samples">soda-test-mocha-samples</a></li>
-<li><a href="https://github.com/ranhs/soda-test-jest-samples.git">soda-test-jest-samples</a></li>
+<li><a href="https://github.com/ranhs/soda-test-jest-samples.git">soda-test-jest-samples</a> (using Angular 14)</li>
 <li><a href="https://github.com/ranhs/soda-test-karma-samples.git">soda-test-karma-samples</a><br>
     Branches:
     <ul>
-    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/anglar7">anglar7</a> - Angular7 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular10">angular10</a> - Angular10 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular11">angular11</a> - Angular11 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular12">angular12</a> - Angular12 sample project</li>
