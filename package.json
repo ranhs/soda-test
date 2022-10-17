@@ -1,6 +1,6 @@
 {
   "name": "soda-test",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Package for Unit and API tests",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -55,6 +55,8 @@
   "builders": "builders.json",
   "dependencies": {
     "@angular-devkit/build-angular": "14.1.3",
+    "@angular/core": "^14.2.6",
+    "@angular/platform-browser-dynamic": "^14.2.6",
     "@types/chai": "4.2.15",
     "@types/chai-as-promised": "7.1.3",
     "@types/sinon": "10.0.13",

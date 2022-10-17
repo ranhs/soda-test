@@ -7,6 +7,7 @@ export {
     SinonSandbox,
     SinonFakeTimers,
     FakeTimerInstallOpts,
+    TestBed,
     Done,
     Rewire,
     TR,
