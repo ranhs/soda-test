@@ -2,7 +2,8 @@ import testSuite from './testSuite'
 import { createSandbox } from 'sinon'
 import { SinonInfo, ControlMethods, ItInfo, DescribeInfo, CaseInfo, valFunction } from './testInfo'
 import { createSinon } from './sinons'
-import { SinonSpy, SinonStub, Rewire, TestBed } from '.'
+import { SinonSpy, SinonStub, Rewire } from '.'
+import { getInitTestBedFunction } from './testbed'
 
 export type anyFunction = Function // eslint-disable-line @typescript-eslint/ban-types
 type constructorType = anyFunction
@@ -367,14 +368,11 @@ export class TestDescribe extends ExecutableBase {
     }
     private defineMainControlMethodsItsAndCases() {
         // TODO: check if there are testbed code to execute
-        if ( TestBed ) {
-            const _testing = require('@angular/platform-browser-dynamic/testing')
-
+        let initTestBed = getInitTestBedFunction()
+        if ( initTestBed ) {
             this.mainExecution.addControlMethods({
-                beforeInner: [function(): void {
-                    TestBed.initTestEnvironment(_testing.BrowserDynamicTestingModule, _testing.platformBrowserDynamicTesting())
-                }]
-            }, this.instance)
+                beforeInner: [initTestBed]
+            }, this.instance);
         }
         
         // update main control methods

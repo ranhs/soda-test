@@ -23,17 +23,7 @@ export const environment = _env
 export {} from 'chai-as-promised'
 export {} from 'sinon-chai'
 
-
 let _request: (app)=> SuperTest<Test>
-let _angular_core_testing;
-
-try {
-    _angular_core_testing = require('@angular/core/testing')
-} catch {
-    _angular_core_testing  = null
-}
-
-export const TestBed = (_angular_core_testing)?_angular_core_testing.TestBed:null
 
 const superLib = 'supertest'
 if ( !isKarma ) {

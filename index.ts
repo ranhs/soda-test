@@ -7,13 +7,17 @@ export {
     SinonSandbox,
     SinonFakeTimers,
     FakeTimerInstallOpts,
-    TestBed,
     Done,
     Rewire,
     TR,
     PTR,
     CreatableClass
 } from './test-lib'
+
+export {
+    TestBed,
+    ComponentFixture
+} from './test-lib/testbed'
 
 import {
     testStep,
