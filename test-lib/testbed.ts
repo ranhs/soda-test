@@ -10,6 +10,9 @@ export { TestModuleMetadata, MetadataOverride, TestEnvironmentOptions } from '@a
 import { Predicate, ProviderToken, BootstrapOptions, CompilerOptions, Provider, ModuleWithProviders, SchemaMetadata} from '@angular/core'
 export { Predicate, ProviderToken, BootstrapOptions, CompilerOptions, Provider, ModuleWithProviders, SchemaMetadata} from '@angular/core'
 import { EventEmitter } from 'events'
+import { targetType } from './executables'
+import { argumentDecorator } from '.'
+import { getInfo, SinonKind } from './testInfo'
 
 function getTestBed(): TestBedInterface {
     let _angular_core_testing : { getTestBed: () => TestBedInterface }
@@ -35,6 +38,64 @@ export function getInitTestBedFunction(): () => void {
     }
     */
    return null
+}
+
+export function fixture<T>(component: Type<T>): argumentDecorator {
+    return (target: targetType, propertyKey: string | symbol, parameterIndex?: number): void => {
+        getInfo(target).addSinon(propertyKey as string, parameterIndex, {
+            caller: null,
+            target: component,
+            method: null,
+            memberMethod: null,
+            kind: SinonKind.Fixture,
+            context: null
+        })
+    }
+}
+
+export function component<T>(component: Type<T>): argumentDecorator {
+    return (target: targetType, propertyKey: string | symbol, parameterIndex?: number): void => {
+        getInfo(target).addSinon(propertyKey as string, parameterIndex, {
+            caller: null,
+            target: component,
+            method: null,
+            memberMethod: null,
+            kind: SinonKind.Component,
+            context: null
+        })
+    }
+}
+
+let lastCreatedFixture: ComponentFixture<unknown>
+let lastComponentType: Type<unknown>
+
+export function createFixture<T>(component: Type<T>): ComponentFixture<T> {
+    if ( TestBed ) {
+        let fixture = TestBed.createComponent(component)
+        lastCreatedFixture = fixture
+        lastComponentType = component
+        fixture['restore'] = () => {
+            if ( lastCreatedFixture === fixture ) {
+                lastCreatedFixture = null
+                lastComponentType = null
+            }
+        }
+        return fixture
+    }
+}
+
+export function createComponent<T>(component: Type<T>): T {
+    if ( TestBed ) {
+        let fixture: ComponentFixture<T>
+        if ( lastComponentType === component ) {
+            // using existing fixture
+            fixture = lastCreatedFixture as never
+        } else {
+            // creating temporaray fixture
+            fixture = TestBed.createComponent(component)
+        }
+        return fixture.componentInstance
+    }
 }
 
 export interface TestBedInterface {

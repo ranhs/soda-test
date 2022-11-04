@@ -40,7 +40,7 @@ export const request = _request
 type constractorType = Function // eslint-disable-line @typescript-eslint/ban-types
 type methodDecorator = (target: targetType, propertyKey: string, descriptor?: PropertyDescriptor) => void
 type classDecorator = (constructor: constractorType) => void
-type argumentDecorator = (target: targetType, propertyKey: string | symbol, parameterIndex?: number) => void
+export type argumentDecorator = (target: targetType, propertyKey: string | symbol, parameterIndex?: number) => void
 type memberDecorator = (prototype: targetType, propName: string) => void
 
 chai.use(chaiAsPromised as never)

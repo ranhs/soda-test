@@ -23,7 +23,9 @@ export enum SinonKind {
     Rewire,
     RewireReload,
     Import,
-    Timers
+    Timers,
+    Fixture,
+    Component
 }
 
 export enum SetStubType {

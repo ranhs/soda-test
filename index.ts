@@ -1,5 +1,6 @@
 
 import * as testLib from './test-lib'
+import * as testBed from './test-lib/testbed'
 import { setJest } from './test-lib/executables'
 export {
     SinonSpy,
@@ -54,6 +55,8 @@ if ( jest_ ) {
         expect: testLib.expect,
         spy: testLib.spy,
         stub: testLib.stub,
+        fixture: testBed.fixture,
+        component: testBed.component,
         before: testLib.before, 
         after: testLib.after, 
         beforeEach: testLib.beforeEach, 
@@ -80,6 +83,8 @@ if ( jest_ ) {
         describe: testLib.describe,
         spy: testLib.spy,
         stub: testLib.stub,
+        fixture: testBed.fixture,
+        component: testBed.component,
         global: testLib.global,
         importPrivate: testLib.importPrivate,
         useFakeTimers: testLib.useFakeTimers,
