@@ -74,13 +74,79 @@ export function createFixture<T>(component: Type<T>): ComponentFixture<T> {
         let fixture = TestBed.createComponent(component)
         lastCreatedFixture = fixture
         lastComponentType = component
+        fillFixtureMethods(fixture)
         fixture['restore'] = () => {
             if ( lastCreatedFixture === fixture ) {
                 lastCreatedFixture = null
                 lastComponentType = null
             }
         }
+        fixture.detectChanges()
         return fixture
+    }
+}
+
+interface ByInterface {
+    css(selector: string): Predicate<DebugElement>
+    directive(type: Type<any>): Predicate<DebugNode>
+    all(): Predicate<DebugNode>
+}
+
+let By: ByInterface = null
+
+function RetriveByMethod(): ByInterface {
+    for ( const libName in require.cache ) {
+        const lib = require.cache[libName]
+        if ( lib.exports.By && lib.exports.By.css && lib.exports.By.directive) {
+            return lib.exports.By
+        }
+    }
+}
+
+function fillFixtureMethods<T>(fixture: ComponentFixture<T>): void {
+    const DebugElementPrototype = Object.getPrototypeOf(fixture.debugElement)
+    if ( !DebugElementPrototype.query.by )
+    {
+        if ( !By ) By = RetriveByMethod()
+        const _query = DebugElementPrototype.query
+
+        Object.defineProperty(DebugElementPrototype, 'query', {
+            get: function() {
+                _query.by = {
+                    css: (selector: string) => {
+                        return this.query(By.css(selector))
+                    }
+                }
+                return _query;
+            }
+        })
+
+        const _queryAll = DebugElementPrototype.queryAll
+        Object.defineProperty(DebugElementPrototype, 'queryAll', {
+            get: function() {
+                _queryAll.by = {
+                    css: (selector: string) => {
+                        return this.queryAll(By.css(selector))
+                    }
+                }
+                return _queryAll
+            }
+        })
+
+        const _queryAllNodes = DebugElementPrototype.queryAllNodes
+        Object.defineProperty(DebugElementPrototype, 'queryAllNodes', {
+            get: function() {
+                _queryAllNodes.by = {
+                    all: () => {
+                        return this.queryAllNodes(By.all())
+                    },
+                    directive: (type: Type<any>) => {
+                        return this.queryAllNodes(By.directive(type))
+                    }
+                }
+                return _queryAllNodes
+            }
+        })
     }
 }
 
@@ -183,7 +249,7 @@ export interface NgZone {
 }
 
 export interface DebugElement extends DebugNode {
-    get nativeElement(): any
+    get nativeElement(): HTMLElement
     get name(): string
     get properties(): { [key: string]: any }
     get attributes(): { [key: string]: string | null }
@@ -191,10 +257,27 @@ export interface DebugElement extends DebugNode {
     get classes(): { [key: string]: boolean }
     get childNodes(): DebugNode[]
     get children(): DebugElement[]
-    query(predicate: Predicate<DebugElement>): DebugElement
-    queryAll(predicate: Predicate<DebugElement>): DebugElement[]
-    queryAllNodes(predicate: Predicate<DebugNode>): DebugNode[]
+    query: {
+        (predicate: Predicate<DebugElement>): DebugElement,
+        by: {css(selector: string): DebugElement}
+    }
+    queryAll: {
+        (predicate: Predicate<DebugElement>): DebugElement[],
+        by: {css(selector: string): DebugElement[]}
+    }
+    queryAllNodes: {
+        (predicate: Predicate<DebugNode>): DebugNode[],
+        by: {
+            directive(type: Type<any>): DebugNode[],
+            all(): DebugNode[]        
+        }
+    }
     triggerEventHandler(eventName: string, eventObj?: any): void
+}
+
+export interface QueryBy<T> {
+    css(selector: string): T
+    directive(type: Type<any>): T
 }
 
 export interface ElementRef<T = any> {
