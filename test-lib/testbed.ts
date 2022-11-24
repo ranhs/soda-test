@@ -88,8 +88,8 @@ export function createFixture<T>(component: Type<T>): ComponentFixture<T> {
 
 interface ByInterface {
     css(selector: string): Predicate<DebugElement>
-    directive(type: Type<any>): Predicate<DebugNode>
-    all(): Predicate<DebugNode>
+    directive(type: Type<any>): Predicate<DebugNode<DebugElement>>
+    all(): Predicate<DebugNode<DebugElement>>
 }
 
 let By: ByInterface = null
@@ -145,6 +145,19 @@ function fillFixtureMethods<T>(fixture: ComponentFixture<T>): void {
                     }
                 }
                 return _queryAllNodes
+            }
+        })
+    }
+
+    if (!DebugElementPrototype.triggerEventHandler.click) {
+        const _triggerEventHandler = DebugElementPrototype.triggerEventHandler
+
+        Object.defineProperty(DebugElementPrototype, 'triggerEventHandler', {
+            get: function() {
+                _triggerEventHandler.click = (objEvent: MouseEvent) => {
+                    this.triggerEventHandler('click', objEvent)
+                }
+                return _triggerEventHandler;
             }
         })
     }
@@ -205,10 +218,10 @@ export interface TestBedInterface {
 }
 
 
-export interface ComponentFixture<T> {
+export interface ComponentFixture<T, DET = DebugElement> {
     componentRef: ComponentRef<T>
     ngZone: NgZone | null
-    debugElement: DebugElement
+    debugElement: DET
     componentInstance: T
     nativeElement: any
     elementRef: ElementRef
@@ -220,6 +233,10 @@ export interface ComponentFixture<T> {
     whenStable(): Promise<any>
     whenRenderingDone(): Promise<any>
     destroy(): void
+}
+
+export interface SodaFixture<T> extends ComponentFixture<T, SodaDebugElement>
+{   
 }
 
 export interface ComponentRef<C> {
@@ -248,36 +265,35 @@ export interface NgZone {
     runOutsideAngular<T>(fn: (...args: any[]) => T): T;
 }
 
-export interface DebugElement extends DebugNode {
+interface DebugElementBase<DET> extends DebugNode<DET> {
     get nativeElement(): HTMLElement
     get name(): string
     get properties(): { [key: string]: any }
     get attributes(): { [key: string]: string | null }
     get styles(): { [key: string]: string | null }
     get classes(): { [key: string]: boolean }
-    get childNodes(): DebugNode[]
-    get children(): DebugElement[]
-    query: {
-        (predicate: Predicate<DebugElement>): DebugElement,
-        by: {css(selector: string): DebugElement}
-    }
-    queryAll: {
-        (predicate: Predicate<DebugElement>): DebugElement[],
-        by: {css(selector: string): DebugElement[]}
-    }
-    queryAllNodes: {
-        (predicate: Predicate<DebugNode>): DebugNode[],
-        by: {
-            directive(type: Type<any>): DebugNode[],
-            all(): DebugNode[]        
-        }
-    }
+    get childNodes(): DebugNode<DET>[]
+    get children(): DET[]
+
+}
+
+export interface DebugElement extends DebugElementBase<DebugElement> {
+    query(predicate: Predicate<DebugElement>): DebugElement
+    queryAll(predicate: Predicate<DebugElement>): DebugElement[]
+    queryAllNodes(predicate: Predicate<DebugNode<DebugElement>>): DebugNode<DebugElement>[]
     triggerEventHandler(eventName: string, eventObj?: any): void
 }
 
-export interface QueryBy<T> {
-    css(selector: string): T
-    directive(type: Type<any>): T
+export interface SodaDebugElement extends DebugElementBase<SodaDebugElement> {
+    query: { by : { css(selector: string): SodaDebugElement } }
+    queryAll: { by : { css(selector: string): SodaDebugElement[] } }
+    queryAllNodes: {by : {
+        directive(type: Type<any>): DebugNode<SodaDebugElement>[],
+        all(): DebugNode<SodaDebugElement>[]        
+    }}
+    triggerEventHandler: {
+        click(eventObj?: MouseEvent): void
+    }
 }
 
 export interface ElementRef<T = any> {
@@ -303,9 +319,9 @@ export interface ViewRef extends ChangeDetectorRef {
     onDestroy(callback: Function): any
 }
 
-export interface DebugNode {
+export interface DebugNode<DET> {
     readonly nativeNode: any
-    get parent(): DebugElement | null
+    get parent(): DET | null
     get injector(): Injector;
     get componentInstance(): any
     get context(): any

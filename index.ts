@@ -17,7 +17,8 @@ export {
 
 export {
     TestBed,
-    ComponentFixture
+    ComponentFixture,
+    SodaFixture
 } from './test-lib/testbed'
 
 import {
