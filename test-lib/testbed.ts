@@ -154,8 +154,11 @@ function fillFixtureMethods<T>(fixture: ComponentFixture<T>): void {
 
         Object.defineProperty(DebugElementPrototype, 'triggerEventHandler', {
             get: function() {
-                _triggerEventHandler.click = (objEvent: MouseEvent) => {
+                _triggerEventHandler.click = (objEvent: PointerEvent) => {
                     this.triggerEventHandler('click', objEvent)
+                }
+                _triggerEventHandler.input = (objEvent: InputEvent) => {
+                    this.triggerEventHandler('input', objEvent)
                 }
                 return _triggerEventHandler;
             }
@@ -292,7 +295,8 @@ export interface SodaDebugElement extends DebugElementBase<SodaDebugElement> {
         all(): DebugNode<SodaDebugElement>[]        
     }}
     triggerEventHandler: {
-        click(eventObj?: MouseEvent): void
+        click(eventObj?: PointerEvent): void
+        input(eventObj?: InputEvent): void
     }
 }
 
