@@ -18,7 +18,8 @@ export {
 export {
     TestBed,
     ComponentFixture,
-    SodaFixture
+    SodaFixture,
+    SodaDebugElement
 } from './test-lib/testbed'
 
 import {
@@ -58,6 +59,7 @@ if ( jest_ ) {
         stub: testLib.stub,
         fixture: testBed.fixture,
         component: testBed.component,
+        addEvents: testBed.addEvents,
         before: testLib.before, 
         after: testLib.after, 
         beforeEach: testLib.beforeEach, 
@@ -86,6 +88,7 @@ if ( jest_ ) {
         stub: testLib.stub,
         fixture: testBed.fixture,
         component: testBed.component,
+        addEvents: testBed.addEvents,
         global: testLib.global,
         importPrivate: testLib.importPrivate,
         useFakeTimers: testLib.useFakeTimers,

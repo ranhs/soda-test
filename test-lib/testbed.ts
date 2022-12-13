@@ -103,7 +103,26 @@ function RetriveByMethod(): ByInterface {
     }
 }
 
-function fillFixtureMethods<T>(fixture: ComponentFixture<T>): void {
+const eventNames: string[] = ['click', 'input', 'ngModelChange']
+
+export function addEvents(...names: string[]) {
+    for (const eventName of names) {
+        if ( eventNames.indexOf(eventName) < 0 ) {
+            eventNames.push(eventName)
+        }
+    }
+}
+
+function fillFixtureMethods<T, DET>(fixture: ComponentFixture<T, DET>): void {
+    // fill fixture methods
+    const FixturePrototype = Object.getPrototypeOf(fixture)
+    if ( !FixturePrototype.queryByCss ) {
+        FixturePrototype.queryByCss = function<E>(selector: string): SodaDebugElement<E> {
+            const fixture1: SodaFixture<T,DET> = this
+            return fixture1.debugElement.query.by.css<E>(selector)
+        }
+    }
+    // fill debugElement methods
     const DebugElementPrototype = Object.getPrototypeOf(fixture.debugElement)
     if ( !DebugElementPrototype.query.by )
     {
@@ -147,23 +166,32 @@ function fillFixtureMethods<T>(fixture: ComponentFixture<T>): void {
                 return _queryAllNodes
             }
         })
-    }
 
-    if (!DebugElementPrototype.triggerEventHandler.click) {
-        const _triggerEventHandler = DebugElementPrototype.triggerEventHandler
-
-        Object.defineProperty(DebugElementPrototype, 'triggerEventHandler', {
-            get: function() {
-                _triggerEventHandler.click = (objEvent: PointerEvent) => {
-                    this.triggerEventHandler('click', objEvent)
-                }
-                _triggerEventHandler.input = (objEvent: InputEvent) => {
-                    this.triggerEventHandler('input', objEvent)
-                }
-                return _triggerEventHandler;
+        Object.defineProperty(DebugElementPrototype, 'text', {
+            get: function(): string {
+                return this.nativeElement.innerText
+            },
+            set: function(value: string): void {
+                this.nativeElement.innerText = value
+                this.triggerEventHandler.ngModelChange(value)
             }
         })
     }
+
+    const triggerEventHandlerDescriptor = Object.getOwnPropertyDescriptor(DebugElementPrototype, 'triggerEventHandler')
+    if ( !triggerEventHandlerDescriptor.get ) {
+        const _triggerEventHandler = DebugElementPrototype.triggerEventHandler
+        Object.defineProperty(DebugElementPrototype, 'triggerEventHandler', {
+            get: function() {
+                for ( const eventName of eventNames ) {
+                    _triggerEventHandler[eventName] = (objEvent: any) => {
+                        this.triggerEventHandler(eventName, objEvent)
+                    }
+                }
+                return _triggerEventHandler
+            }
+        })
+    }    
 }
 
 export function createComponent<T>(component: Type<T>): T {
@@ -238,8 +266,15 @@ export interface ComponentFixture<T, DET = DebugElement> {
     destroy(): void
 }
 
-export interface SodaFixture<T> extends ComponentFixture<T, SodaDebugElement>
-{   
+export interface CommonEvents {
+    click(eventObj?: PointerEvent): void
+    input(eventObj?: InputEvent): void
+    ngModelChange(text: string): void
+}
+
+export interface SodaFixture<T, E = CommonEvents> extends ComponentFixture<T, SodaDebugElement<E>>
+{
+    queryByCss<E1=E>(selector: string): SodaDebugElement<E1>   
 }
 
 export interface ComponentRef<C> {
@@ -287,17 +322,15 @@ export interface DebugElement extends DebugElementBase<DebugElement> {
     triggerEventHandler(eventName: string, eventObj?: any): void
 }
 
-export interface SodaDebugElement extends DebugElementBase<SodaDebugElement> {
-    query: { by : { css(selector: string): SodaDebugElement } }
-    queryAll: { by : { css(selector: string): SodaDebugElement[] } }
+export interface SodaDebugElement<E = CommonEvents> extends DebugElementBase<SodaDebugElement> {
+    text: string
+    query: { by : { css<E1=E>(selector: string): SodaDebugElement<E1> } }
+    queryAll: { by : { css<E1=E>(selector: string): SodaDebugElement<E1>[] } }
     queryAllNodes: {by : {
-        directive(type: Type<any>): DebugNode<SodaDebugElement>[],
-        all(): DebugNode<SodaDebugElement>[]        
+        directive<E1=E>(type: Type<any>): DebugNode<SodaDebugElement<E1>>[],
+        all<E1=E>(): DebugNode<SodaDebugElement<E1>>[]
     }}
-    triggerEventHandler: {
-        click(eventObj?: PointerEvent): void
-        input(eventObj?: InputEvent): void
-    }
+    triggerEventHandler: E
 }
 
 export interface ElementRef<T = any> {
