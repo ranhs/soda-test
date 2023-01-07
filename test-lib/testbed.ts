@@ -7,7 +7,7 @@
 
 import { TestModuleMetadata, MetadataOverride, TestEnvironmentOptions } from '@angular/core/testing'
 export { TestModuleMetadata, MetadataOverride, TestEnvironmentOptions } from '@angular/core/testing'
-import { Predicate, ProviderToken, BootstrapOptions, CompilerOptions, Provider, ModuleWithProviders, SchemaMetadata} from '@angular/core'
+import { Predicate, ProviderToken, BootstrapOptions, CompilerOptions, Provider, ModuleWithProviders, SchemaMetadata, ComponentDecorator, TypeDecorator} from '@angular/core'
 export { Predicate, ProviderToken, BootstrapOptions, CompilerOptions, Provider, ModuleWithProviders, SchemaMetadata} from '@angular/core'
 import { EventEmitter } from 'events'
 import { targetType } from './executables'
@@ -25,7 +25,29 @@ function getTestBed(): TestBedInterface {
     }
 }
 
+interface AngularCore {
+    Component: ComponentDecorator
+}
+
+function Component(obj: unknown): TypeDecorator {
+    if ( AngularCore ) {
+        return AngularCore.Component(obj)
+    }
+    return ()=>{};
+}
+
+function getAngularCore(): AngularCore {
+    // @angular/core is the only libraray the exports "Component"
+    for ( let key of Object.keys(require.cache) ) {
+        if ( require.cache[key].exports.Component ) {
+            return require.cache[key].exports
+        }
+    }
+    return null
+}
+
 export const TestBed = getTestBed()
+const AngularCore = getAngularCore()
 
 export function getInitTestBedFunction(): () => void {
     /*
@@ -40,11 +62,16 @@ export function getInitTestBedFunction(): () => void {
    return null
 }
 
-export function fixture<T>(component: Type<T>): argumentDecorator {
+export interface FixtureOptions {
+    declarations?: any[]
+    imports?: any[]
+}
+
+export function fixture<T>(component: Type<T>, options?: FixtureOptions): argumentDecorator {
     return (target: targetType, propertyKey: string | symbol, parameterIndex?: number): void => {
         getInfo(target).addSinon(propertyKey as string, parameterIndex, {
             caller: null,
-            target: component,
+            target: { component, options },
             method: null,
             memberMethod: null,
             kind: SinonKind.Fixture,
@@ -66,12 +93,83 @@ export function component<T>(component: Type<T>): argumentDecorator {
     }
 }
 
-let lastCreatedFixture: ComponentFixture<unknown>
+const componentTestInfo = {
+    selector: `host-component`,
+    template: '' // shall be set before use
+}
+
+@Component(componentTestInfo)
+class TestHostComponent {
+}
+
+function getSelector<T>(component: Type<T>): string {
+    if ( !component ) return null
+    const annotations = component['__annotations__']
+    if (!annotations || !Array.isArray(annotations) || annotations.length === 0) return null
+    return annotations[0]?.selector
+}
+
+function getModuleDef<T>(component: Type<T>, options: FixtureOptions): TestModuleMetadata {
+    const moduleDef: TestModuleMetadata = {
+        declarations: options?.declarations ?? [],
+        imports: options?.imports
+    }
+    if ( moduleDef.declarations.indexOf(component) < 0 )
+        moduleDef.declarations.push(component)
+    moduleDef.declarations.push(TestHostComponent)
+    return moduleDef
+}
+
+class SodaFixtureWrapper<T> implements SodaFixture<T> {
+    constructor(private fixtureWrapper: ComponentFixture<TestHostComponent>, selector: string) {
+        if ( !By ) By = RetriveByMethod()
+        this.ngZone = fixtureWrapper.ngZone
+        this.debugElement = fixtureWrapper.debugElement.query(By.css(selector)) as never
+        this.componentInstance = this.debugElement.componentInstance
+        this.nativeElement = this.debugElement.nativeElement
+    }
+
+    ngZone: NgZone | null
+    debugElement: SodaDebugElement
+    componentInstance: T
+    nativeElement: any
+    detectChanges(checkNoChanges?: boolean): void {
+        this.fixtureWrapper.detectChanges(checkNoChanges)
+    }
+    checkNoChanges(): void {
+        this.fixtureWrapper.checkNoChanges()
+    }
+    autoDetectChanges(autoDetect?: boolean): void {
+        this.fixtureWrapper.autoDetectChanges(autoDetect)
+    }
+    isStable(): boolean {
+        return this.fixtureWrapper.isStable()
+    }
+    whenStable(): Promise<any> {
+        return this.fixtureWrapper.whenStable()
+    }
+    whenRenderingDone(): Promise<any> {
+        return this.fixtureWrapper.whenRenderingDone()
+    }
+    destroy(): void {
+        this.fixtureWrapper.destroy()
+    }
+    queryByCss<E1 = CommonEvents>(selector: string): SodaDebugElement<E1> {
+        return this.debugElement.query.by.css<E1>(selector)
+    }
+}
+
+let lastCreatedFixture: SodaFixture<unknown>
 let lastComponentType: Type<unknown>
 
-export function createFixture<T>(component: Type<T>): ComponentFixture<T> {
+export function createFixture<T>(component: Type<T>, options: FixtureOptions): SodaFixture<T> {
     if ( TestBed ) {
-        let fixture = TestBed.createComponent(component)
+        TestBed.configureTestingModule(getModuleDef(component, options))
+        const selector = getSelector(component)
+        if (!selector) throw new Error(`cannot create Fixture for type ${component.name}`)
+        componentTestInfo.template = `<${selector}></${selector}>`
+        const outerfixture = TestBed.createComponent(TestHostComponent)
+        const fixture: SodaFixture<T> = new SodaFixtureWrapper<T>(outerfixture, selector)
         lastCreatedFixture = fixture
         lastComponentType = component
         fillFixtureMethods(fixture)
@@ -114,14 +212,6 @@ export function addEvents(...names: string[]) {
 }
 
 function fillFixtureMethods<T, DET>(fixture: ComponentFixture<T, DET>): void {
-    // fill fixture methods
-    const FixturePrototype = Object.getPrototypeOf(fixture)
-    if ( !FixturePrototype.queryByCss ) {
-        FixturePrototype.queryByCss = function<E>(selector: string): SodaDebugElement<E> {
-            const fixture1: SodaFixture<T,DET> = this
-            return fixture1.debugElement.query.by.css<E>(selector)
-        }
-    }
     // fill debugElement methods
     const DebugElementPrototype = Object.getPrototypeOf(fixture.debugElement)
     if ( !DebugElementPrototype.query.by )
@@ -250,13 +340,13 @@ export interface TestBedInterface {
 
 
 export interface ComponentFixture<T, DET = DebugElement> {
-    componentRef: ComponentRef<T>
+    //componentRef: ComponentRef<T>
     ngZone: NgZone | null
     debugElement: DET
     componentInstance: T
     nativeElement: any
-    elementRef: ElementRef
-    changeDetectorRef: ChangeDetectorRef
+    //elementRef: ElementRef
+    //changeDetectorRef: ChangeDetectorRef
     detectChanges(checkNoChanges?: boolean): void
     checkNoChanges(): void
     autoDetectChanges(autoDetect?: boolean): void

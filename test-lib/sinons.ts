@@ -4,7 +4,7 @@ import { SinonInfo, SinonKind, SetStubType } from "./testInfo";
 import { SinonSpy, SinonStub, SinonFakeTimers } from "./index";
 import { targetType, anyFunction } from "./executables";
 import { setProperty } from "./setProperty";
-import { createComponent, createFixture } from "./testbed";
+import { createComponent, createFixture, FixtureOptions } from "./testbed";
 
 type sinonMethod = (...args: unknown[]) => unknown
 
@@ -317,7 +317,8 @@ export function createSinon(sinonInfo: SinonInfo,
             }
             return fakeTimers as never
         case SinonKind.Fixture:
-            return createFixture(sinonInfo.target as never) as never
+            const target: {component: never, options: FixtureOptions} = sinonInfo.target as never
+            return createFixture(target.component, target.options) as never
         case SinonKind.Component:
             return createComponent(sinonInfo.target as never) as never
     }
