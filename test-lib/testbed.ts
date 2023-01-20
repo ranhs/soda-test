@@ -65,10 +65,16 @@ export function getInitTestBedFunction(): () => void {
 export interface FixtureOptions {
     declarations?: any[]
     imports?: any[]
+    inputs?: string[]
+    outputs?: string[]
+    events?: string[]
 }
 
 export function fixture<T>(component: Type<T>, options?: FixtureOptions): argumentDecorator {
     return (target: targetType, propertyKey: string | symbol, parameterIndex?: number): void => {
+        if (options?.events) {
+            addEvents(...options.events)
+        }
         getInfo(target).addSinon(propertyKey as string, parameterIndex, {
             caller: null,
             target: { component, options },
@@ -93,13 +99,11 @@ export function component<T>(component: Type<T>): argumentDecorator {
     }
 }
 
-const componentTestInfo = {
-    selector: `host-component`,
-    template: '' // shall be set before use
-}
 
-@Component(componentTestInfo)
-class TestHostComponent {
+interface TestHostAPI {
+    inputs: {[key: string]: any}
+    events: EventEmitter
+    eventCalled(name: string, data: any): void
 }
 
 function getSelector<T>(component: Type<T>): string {
@@ -109,19 +113,19 @@ function getSelector<T>(component: Type<T>): string {
     return annotations[0]?.selector
 }
 
-function getModuleDef<T>(component: Type<T>, options: FixtureOptions): TestModuleMetadata {
+function getModuleDef<T, TestHostComponent>(component: Type<T>, options: FixtureOptions, thc: Type<TestHostComponent>): TestModuleMetadata {
     const moduleDef: TestModuleMetadata = {
         declarations: options?.declarations ?? [],
         imports: options?.imports
     }
     if ( moduleDef.declarations.indexOf(component) < 0 )
         moduleDef.declarations.push(component)
-    moduleDef.declarations.push(TestHostComponent)
+    moduleDef.declarations.push(thc)
     return moduleDef
 }
 
 class SodaFixtureWrapper<T> implements SodaFixture<T> {
-    constructor(private fixtureWrapper: ComponentFixture<TestHostComponent>, selector: string) {
+    constructor(private fixtureWrapper: ComponentFixture<TestHostAPI>, selector: string) {
         if ( !By ) By = RetriveByMethod()
         this.ngZone = fixtureWrapper.ngZone
         this.debugElement = fixtureWrapper.debugElement.query(By.css(selector)) as never
@@ -157,6 +161,12 @@ class SodaFixtureWrapper<T> implements SodaFixture<T> {
     queryByCss<E1 = CommonEvents>(selector: string): SodaDebugElement<E1> {
         return this.debugElement.query.by.css<E1>(selector)
     }
+    get inputs(): {[key: string]: any} {
+        return this.fixtureWrapper.componentInstance.inputs
+    }
+    get events(): EventEmitter {
+        return this.fixtureWrapper.componentInstance.events
+    }
 }
 
 let lastCreatedFixture: SodaFixture<unknown>
@@ -164,10 +174,22 @@ let lastComponentType: Type<unknown>
 
 export function createFixture<T>(component: Type<T>, options: FixtureOptions): SodaFixture<T> {
     if ( TestBed ) {
-        TestBed.configureTestingModule(getModuleDef(component, options))
         const selector = getSelector(component)
         if (!selector) throw new Error(`cannot create Fixture for type ${component.name}`)
-        componentTestInfo.template = `<${selector}></${selector}>`
+        let TestHostComponent = class TestHostComponent {
+            inputs: {[key: string]: any} = {}
+            events = new EventEmitter();
+            eventCalled(name: string, data: any): void {
+                this.events.emit(name, data)
+            }
+        }
+        TestHostComponent = Reflect.decorate([
+            Component({
+                selector: `host-component`,
+                template: createTemplate(selector, options)
+            })
+        ], TestHostComponent) as never
+        TestBed.configureTestingModule(getModuleDef(component, options, TestHostComponent))
         const outerfixture = TestBed.createComponent(TestHostComponent)
         const fixture: SodaFixture<T> = new SodaFixtureWrapper<T>(outerfixture, selector)
         lastCreatedFixture = fixture
@@ -182,6 +204,24 @@ export function createFixture<T>(component: Type<T>, options: FixtureOptions): S
         fixture.detectChanges()
         return fixture
     }
+}
+
+function createTemplate(selector: string, options: FixtureOptions): string {
+    let template = `<${selector}`
+    if (options) {
+        if (options.inputs) {
+            for (const input of options.inputs) {
+                template += ` [${input}]="inputs['${input}']"`
+            }
+        }
+        if (options.outputs) {
+            for (const output of options.outputs) {
+                template += ` (${output})="eventCalled('${output}', $event)"`
+            }
+        }
+    }
+    template += `></${selector}>`
+    return template
 }
 
 interface ByInterface {
@@ -364,7 +404,9 @@ export interface CommonEvents {
 
 export interface SodaFixture<T, E = CommonEvents> extends ComponentFixture<T, SodaDebugElement<E>>
 {
-    queryByCss<E1=E>(selector: string): SodaDebugElement<E1>   
+    queryByCss<E1=E>(selector: string): SodaDebugElement<E1>
+    get inputs(): {[key: string]: any}
+    get events(): EventEmitter
 }
 
 export interface ComponentRef<C> {
