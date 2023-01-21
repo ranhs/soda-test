@@ -21,7 +21,7 @@ Soda-test supports unit-test for frontend as well as for backend, with the same 
 Furthermore, soda-test gives you a framework for writing your API test.
 </p>
 <p>
-<font size="+1" color="Red"><b>And now, Soda-Test supports Angular13 and Angular14.</b></font><br>
+<font size="+1" color="Red"><b>And now, Soda-Test supports Angular <a href="https://github.com/ranhs/soda-test/wiki/25-integrationtest">Integration tests</a>.</b></font><br>
 </p>
 <br><br>
 <h2 name="Installation">Installation</h2>
@@ -127,6 +127,7 @@ Following are all the pages available in GitHub wiki:<br>
 <li><a href="https://github.com/ranhs/soda-test/wiki/22-testcases">Use Soda-Test for doing API testing by using <b>Test Cases</b></a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/23-testplan">Use Soda-Test to generate a JSON document about your tests</a></li>
 <li><a href="https://github.com/ranhs/soda-test/wiki/24-configuration">Use Soda-Test configuration file to costumize soda-test abilities</a></li>
+<li><a href="https://github.com/ranhs/soda-test/wiki/25-integrationtest">Use Soda-Test for running integration/Component tests, i.e. to test component bindings to HTML</a></li>
 </ul>
 <h2>Sample Code</h2>
 The following GitHub repositories holds sample codes for soda-test:
@@ -136,8 +137,6 @@ The following GitHub repositories holds sample codes for soda-test:
 <li><a href="https://github.com/ranhs/soda-test-karma-samples.git">soda-test-karma-samples</a><br>
     Branches:
     <ul>
-    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular10">angular10</a> - Angular10 sample project</li>
-    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular11">angular11</a> - Angular11 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular12">angular12</a> - Angular12 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular13">angular13</a> - Angular13 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/main">main</a> - Angular14 sample project</li>
