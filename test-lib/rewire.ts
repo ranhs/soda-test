@@ -98,7 +98,7 @@ try {
 const _init_configuration = readConfigurationFile(fs)
 const _readconfiguration_filename = (fs)?readConfigurationFileName():null
 
-interface AnExportObject extends Record<string, unknown> {
+interface AnExportObject extends Record<string, unknown> { // eslint-disable-line @typescript-eslint/no-empty-interface
 }
 
 try {
@@ -838,14 +838,14 @@ function rewireConfiguration(config: SodaTestConfiguration): RewireConfiguration
 function reloadLibraray(_exports: AnExportObject): AnExportObject {
     // find the libraray
     let libName: string = null
-    for (let name of Object.keys(require.cache)) {
+    for (const name of Object.keys(require.cache)) {
         if ( require.cache[name].exports === _exports ) {
             libName = name
             break
         }
     }
     if (libName === null) return null
-    let backupEntry = require.cache[libName]
+    const backupEntry = require.cache[libName]
     delete require.cache[libName]
     // Build the "require(libName)" command:
     const requireLibFunc = ()=>/*S*/require(libName);
@@ -855,7 +855,7 @@ function reloadLibraray(_exports: AnExportObject): AnExportObject {
     requireCommand += "(libName)"
     console.log('requireCommand', requireCommand)
     // run the require command
-    let reloadedlib = eval(requireCommand)
+    const reloadedlib = eval(requireCommand)
     // restore the original cache entry
     require.cache[libName] = backupEntry
     return reloadedlib

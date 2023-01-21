@@ -34,7 +34,7 @@ const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg
 const ARGUMENT_NAMES = /([^\s,]+)/g
 function getParamNames(func: anyFunction): string[] {
     const fnStr = func.toString().replace(STRIP_COMMENTS, '');
-    let result = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')')).match(ARGUMENT_NAMES);
+    let result: string[] = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')')).match(ARGUMENT_NAMES);
     if(result === null)
         result = [];
     return result;
@@ -368,7 +368,7 @@ export class TestDescribe extends ExecutableBase {
     }
     private defineMainControlMethodsItsAndCases() {
         // TODO: check if there are testbed code to execute
-        let initTestBed = getInitTestBedFunction()
+        const initTestBed = getInitTestBedFunction()
         if ( initTestBed ) {
             this.mainExecution.addControlMethods({
                 beforeInner: [initTestBed]

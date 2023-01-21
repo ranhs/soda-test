@@ -15,10 +15,9 @@ import { argumentDecorator } from '.'
 import { getInfo, SinonKind } from './testInfo'
 
 function getTestBed(): TestBedInterface {
-    let _angular_core_testing : { getTestBed: () => TestBedInterface }
     // @angular/core/testing is the only libraray the exports "getTestBed"
-    for ( let key of Object.keys(require.cache) ) {
-        let getTestBed = require.cache[key].exports.getTestBed
+    for ( const key of Object.keys(require.cache) ) {
+        const getTestBed = require.cache[key].exports.getTestBed
         if ( getTestBed ) {
             return getTestBed()
         }
@@ -33,12 +32,12 @@ function Component(obj: unknown): TypeDecorator {
     if ( AngularCore ) {
         return AngularCore.Component(obj)
     }
-    return ()=>{};
+    return ()=>{/*not supported*/};
 }
 
 function getAngularCore(): AngularCore {
     // @angular/core is the only libraray the exports "Component"
-    for ( let key of Object.keys(require.cache) ) {
+    for ( const key of Object.keys(require.cache) ) {
         if ( require.cache[key].exports.Component ) {
             return require.cache[key].exports
         }
@@ -63,8 +62,8 @@ export function getInitTestBedFunction(): () => void {
 }
 
 export interface FixtureOptions {
-    declarations?: any[]
-    imports?: any[]
+    declarations?: unknown[]
+    imports?: unknown[]
     inputs?: string[]
     outputs?: string[]
     events?: string[]
@@ -101,9 +100,9 @@ export function component<T>(component: Type<T>): argumentDecorator {
 
 
 interface TestHostAPI {
-    inputs: {[key: string]: any}
+    inputs: {[key: string]: unknown}
     events: EventEmitter
-    eventCalled(name: string, data: any): void
+    eventCalled(name: string, data: unknown): void
 }
 
 function getSelector<T>(component: Type<T>): string {
@@ -124,6 +123,9 @@ function getModuleDef<T, TestHostComponent>(component: Type<T>, options: Fixture
     return moduleDef
 }
 
+type ANY = any // eslint-disable-line @typescript-eslint/no-explicit-any
+type AFunction = Function // eslint-disable-line @typescript-eslint/ban-types
+
 class SodaFixtureWrapper<T> implements SodaFixture<T> {
     constructor(private fixtureWrapper: ComponentFixture<TestHostAPI>, selector: string) {
         if ( !By ) By = RetriveByMethod()
@@ -136,7 +138,7 @@ class SodaFixtureWrapper<T> implements SodaFixture<T> {
     ngZone: NgZone | null
     debugElement: SodaDebugElement
     componentInstance: T
-    nativeElement: any
+    nativeElement: ANY
     detectChanges(checkNoChanges?: boolean): void {
         this.fixtureWrapper.detectChanges(checkNoChanges)
     }
@@ -149,10 +151,10 @@ class SodaFixtureWrapper<T> implements SodaFixture<T> {
     isStable(): boolean {
         return this.fixtureWrapper.isStable()
     }
-    whenStable(): Promise<any> {
+    whenStable(): Promise<ANY> { 
         return this.fixtureWrapper.whenStable()
     }
-    whenRenderingDone(): Promise<any> {
+    whenRenderingDone(): Promise<ANY> {
         return this.fixtureWrapper.whenRenderingDone()
     }
     destroy(): void {
@@ -161,7 +163,7 @@ class SodaFixtureWrapper<T> implements SodaFixture<T> {
     queryByCss<E1 = CommonEvents>(selector: string): SodaDebugElement<E1> {
         return this.debugElement.query.by.css<E1>(selector)
     }
-    get inputs(): {[key: string]: any} {
+    get inputs(): {[key: string]: unknown} { 
         return this.fixtureWrapper.componentInstance.inputs
     }
     get events(): EventEmitter {
@@ -177,9 +179,9 @@ export function createFixture<T>(component: Type<T>, options: FixtureOptions): S
         const selector = getSelector(component)
         if (!selector) throw new Error(`cannot create Fixture for type ${component.name}`)
         let TestHostComponent = class TestHostComponent {
-            inputs: {[key: string]: any} = {}
+            inputs: {[key: string]: unknown} = {}
             events = new EventEmitter();
-            eventCalled(name: string, data: any): void {
+            eventCalled(name: string, data: unknown): void {
                 this.events.emit(name, data)
             }
         }
@@ -226,7 +228,7 @@ function createTemplate(selector: string, options: FixtureOptions): string {
 
 interface ByInterface {
     css(selector: string): Predicate<DebugElement>
-    directive(type: Type<any>): Predicate<DebugNode<DebugElement>>
+    directive(type: Type<ANY>): Predicate<DebugNode<DebugElement>> 
     all(): Predicate<DebugNode<DebugElement>>
 }
 
@@ -243,7 +245,7 @@ function RetriveByMethod(): ByInterface {
 
 const eventNames: string[] = ['click', 'input', 'ngModelChange']
 
-export function addEvents(...names: string[]) {
+export function addEvents(...names: string[]): void {
     for (const eventName of names) {
         if ( eventNames.indexOf(eventName) < 0 ) {
             eventNames.push(eventName)
@@ -289,7 +291,7 @@ function fillFixtureMethods<T, DET>(fixture: ComponentFixture<T, DET>): void {
                     all: () => {
                         return this.queryAllNodes(By.all())
                     },
-                    directive: (type: Type<any>) => {
+                    directive: (type: Type<ANY>) => {
                         return this.queryAllNodes(By.directive(type))
                     }
                 }
@@ -314,7 +316,7 @@ function fillFixtureMethods<T, DET>(fixture: ComponentFixture<T, DET>): void {
         Object.defineProperty(DebugElementPrototype, 'triggerEventHandler', {
             get: function() {
                 for ( const eventName of eventNames ) {
-                    _triggerEventHandler[eventName] = (objEvent: any) => {
+                    _triggerEventHandler[eventName] = (objEvent: unknown) => {
                         this.triggerEventHandler(eventName, objEvent)
                     }
                 }
@@ -340,41 +342,41 @@ export function createComponent<T>(component: Type<T>): T {
 
 export interface TestBedInterface {
     get platform(): PlatformRef
-    get ngModule(): Type<any> | Type<any>[]
-    initTestEnvironment(ngModule: Type<any> | Type<any>[], platform: PlatformRef, options?: TestEnvironmentOptions): void
+    get ngModule(): Type<ANY> | Type<ANY>[]
+    initTestEnvironment(ngModule: Type<ANY> | Type<ANY>[], platform: PlatformRef, options?: TestEnvironmentOptions): void
     resetTestEnvironment(): void
     resetTestingModule(): TestBedInterface
     configureCompiler(config: {
-        providers?: any[]
+        providers?: ANY[]
         useJit?: boolean
     }): void
     configureTestingModule(moduleDef: TestModuleMetadata): TestBedInterface
-    compileComponents(): Promise<any>
+    compileComponents(): Promise<ANY>
     inject<T>(token: ProviderToken<T>, notFoundValue?: T, flags?: InjectFlags): T
     inject<T>(token: ProviderToken<T>, notFoundValue: null, flags?: InjectFlags): T | null
     /** @deprecated from v9.0.0 use TestBed.inject */
-    get<T>(token: ProviderToken<T>, notFoundValue?: T, flags?: InjectFlags): any
+    get<T>(token: ProviderToken<T>, notFoundValue?: T, flags?: InjectFlags): ANY
     /** @deprecated from v9.0.0 use TestBed.inject */
-    get(token: any, notFoundValue?: any): any
-    execute(tokens: any[], fn: Function, context?: any): any
-    overrideModule(ngModule: Type<any>, override: MetadataOverride<NgModule>): TestBedInterface
-    overrideComponent(component: Type<any>, override: MetadataOverride<Component>): TestBedInterface
-    overrideDirective(directive: Type<any>, override: MetadataOverride<Directive>): TestBedInterface
-    overridePipe(pipe: Type<any>, override: MetadataOverride<Pipe>): TestBedInterface
-    overrideTemplate(component: Type<any>, template: string): TestBedInterface
-    overrideProvider(token: any, provider: {
-        useFactory: Function;
-        deps: any[];
+    get(token: ANY, notFoundValue?: ANY): ANY
+    execute(tokens: ANY[], fn: AFunction, context?: ANY): ANY
+    overrideModule(ngModule: Type<ANY>, override: MetadataOverride<NgModule>): TestBedInterface
+    overrideComponent(component: Type<ANY>, override: MetadataOverride<Component>): TestBedInterface
+    overrideDirective(directive: Type<ANY>, override: MetadataOverride<Directive>): TestBedInterface
+    overridePipe(pipe: Type<ANY>, override: MetadataOverride<Pipe>): TestBedInterface
+    overrideTemplate(component: Type<ANY>, template: string): TestBedInterface
+    overrideProvider(token: ANY, provider: {
+        useFactory: AFunction;
+        deps: ANY[];
     }): TestBedInterface
-    overrideProvider(token: any, provider: {
-        useValue: any
+    overrideProvider(token: ANY, provider: {
+        useValue: ANY
     }): TestBedInterface
-    overrideProvider(token: any, provider: {
-        useFactory?: Function
-        useValue?: any
-        deps?: any[]
+    overrideProvider(token: ANY, provider: {
+        useFactory?: AFunction
+        useValue?: ANY
+        deps?: ANY[]
     }): TestBedInterface
-    overrideTemplateUsingTestingModule(component: Type<any>, template: string): TestBedInterface
+    overrideTemplateUsingTestingModule(component: Type<ANY>, template: string): TestBedInterface
     createComponent<T>(component: Type<T>): ComponentFixture<T>
 }
 
@@ -384,15 +386,15 @@ export interface ComponentFixture<T, DET = DebugElement> {
     ngZone: NgZone | null
     debugElement: DET
     componentInstance: T
-    nativeElement: any
+    nativeElement: ANY
     //elementRef: ElementRef
     //changeDetectorRef: ChangeDetectorRef
     detectChanges(checkNoChanges?: boolean): void
     checkNoChanges(): void
     autoDetectChanges(autoDetect?: boolean): void
     isStable(): boolean
-    whenStable(): Promise<any>
-    whenRenderingDone(): Promise<any>
+    whenStable(): Promise<ANY>
+    whenRenderingDone(): Promise<ANY>
     destroy(): void
 }
 
@@ -405,7 +407,7 @@ export interface CommonEvents {
 export interface SodaFixture<T, E = CommonEvents> extends ComponentFixture<T, SodaDebugElement<E>>
 {
     queryByCss<E1=E>(selector: string): SodaDebugElement<E1>
-    get inputs(): {[key: string]: any}
+    get inputs(): {[key: string]: ANY}
     get events(): EventEmitter
 }
 
@@ -416,9 +418,9 @@ export interface ComponentRef<C> {
     get instance(): C
     get hostView(): ViewRef
     get changeDetectorRef(): ChangeDetectorRef
-    get componentType(): Type<any>
+    get componentType(): Type<ANY>
     destroy(): void
-    onDestroy(callback: Function): void
+    onDestroy(callback: AFunction): void
 }
 
 export interface NgZone {
@@ -429,16 +431,16 @@ export interface NgZone {
     readonly onMicrotaskEmpty: EventEmitter
     readonly onStable: EventEmitter
     readonly onError: EventEmitter
-    run<T>(fn: (...args: any[]) => T, applyThis?: any, applyArgs?: any[]): T;
-    runTask<T>(fn: (...args: any[]) => T, applyThis?: any, applyArgs?: any[], name?: string): T;
-    runGuarded<T>(fn: (...args: any[]) => T, applyThis?: any, applyArgs?: any[]): T;
-    runOutsideAngular<T>(fn: (...args: any[]) => T): T;
+    run<T>(fn: (...args: ANY[]) => T, applyThis?: ANY, applyArgs?: ANY[]): T;
+    runTask<T>(fn: (...args: ANY[]) => T, applyThis?: ANY, applyArgs?: ANY[], name?: string): T;
+    runGuarded<T>(fn: (...args: ANY[]) => T, applyThis?: ANY, applyArgs?: ANY[]): T;
+    runOutsideAngular<T>(fn: (...args: ANY[]) => T): T;
 }
 
 interface DebugElementBase<DET> extends DebugNode<DET> {
     get nativeElement(): HTMLElement
     get name(): string
-    get properties(): { [key: string]: any }
+    get properties(): { [key: string]: ANY }
     get attributes(): { [key: string]: string | null }
     get styles(): { [key: string]: string | null }
     get classes(): { [key: string]: boolean }
@@ -451,7 +453,7 @@ export interface DebugElement extends DebugElementBase<DebugElement> {
     query(predicate: Predicate<DebugElement>): DebugElement
     queryAll(predicate: Predicate<DebugElement>): DebugElement[]
     queryAllNodes(predicate: Predicate<DebugNode<DebugElement>>): DebugNode<DebugElement>[]
-    triggerEventHandler(eventName: string, eventObj?: any): void
+    triggerEventHandler(eventName: string, eventObj?: unknown): void
 }
 
 export interface SodaDebugElement<E = CommonEvents> extends DebugElementBase<SodaDebugElement> {
@@ -459,13 +461,13 @@ export interface SodaDebugElement<E = CommonEvents> extends DebugElementBase<Sod
     query: { by : { css<E1=E>(selector: string): SodaDebugElement<E1> } }
     queryAll: { by : { css<E1=E>(selector: string): SodaDebugElement<E1>[] } }
     queryAllNodes: {by : {
-        directive<E1=E>(type: Type<any>): DebugNode<SodaDebugElement<E1>>[],
+        directive<E1=E>(type: Type<ANY>): DebugNode<SodaDebugElement<E1>>[],
         all<E1=E>(): DebugNode<SodaDebugElement<E1>>[]
     }}
     triggerEventHandler: E
 }
 
-export interface ElementRef<T = any> {
+export interface ElementRef<T = ANY> {
     nativeElement: T
 }
 
@@ -479,33 +481,33 @@ export interface ChangeDetectorRef {
 
 export interface Injector {
     get<T>(token: ProviderToken<T>, notFoundValue?: T, flags?: InjectFlags): T
-    get(token: any, notFoundValue?: any): any
+    get(token: ANY, notFoundValue?: ANY): ANY
 }
 
 export interface ViewRef extends ChangeDetectorRef {
     destroy(): void
     get destroyed(): boolean
-    onDestroy(callback: Function): any
+    onDestroy(callback: AFunction): ANY
 }
 
 export interface DebugNode<DET> {
-    readonly nativeNode: any
+    readonly nativeNode: ANY
     get parent(): DET | null
     get injector(): Injector;
-    get componentInstance(): any
-    get context(): any
+    get componentInstance(): ANY
+    get context(): ANY
     get listeners(): DebugEventListener[]
-    get references(): { [key: string]: any }
-    get providerTokens(): any[]
+    get references(): { [key: string]: ANY }
+    get providerTokens(): ANY[]
 }
 
 export interface DebugEventListener {
     name: string
-    callback: Function
+    callback: AFunction
 }
 
 export interface Type<T> extends Function {
-    new (...args: any[]): T;
+    new (...args: unknown[]): T;
 }
 
 export enum InjectFlags {
@@ -540,7 +542,7 @@ export interface NgModuleRef<T> {
 
 export interface EnvironmentInjector extends Injector {
     get<T>(token: ProviderToken<T>, notFoundValue?: T, flags?: InjectFlags): T;
-    get(token: any, notFoundValue?: any): any;
+    get(token: ANY, notFoundValue?: ANY): ANY;
     runInContext<ReturnT>(fn: () => ReturnT): ReturnT;
     destroy(): void;
 }
@@ -551,7 +553,7 @@ export interface ComponentFactoryResolver {
 
 export interface ComponentFactory<C> {
     get selector(): string
-    componentType(): Type<any>
+    componentType(): Type<ANY>
     get ngContentSelectors(): string[]
     get inputs(): {
         propName: string
@@ -561,17 +563,17 @@ export interface ComponentFactory<C> {
         propName: string
         templateName: string
     }[]
-    create(injector: Injector, projectableNodes?: any[][], rootSelectorOrNode?: string | any, environmentInjector?: EnvironmentInjector | NgModuleRef<any>): ComponentRef<C>
+    create(injector: Injector, projectableNodes?: ANY[][], rootSelectorOrNode?: string | ANY, environmentInjector?: EnvironmentInjector | NgModuleRef<ANY>): ComponentRef<C>
 }
 
 export interface NgModule {
     providers?: Provider[];
-    declarations?: Array<Type<any> | any[]>;
-    imports?: Array<Type<any> | ModuleWithProviders<{}> | any[]>;
-    exports?: Array<Type<any> | any[]>;
-    entryComponents?: Array<Type<any> | any[]>;
-    bootstrap?: Array<Type<any> | any[]>;
-    schemas?: Array<SchemaMetadata | any[]>;
+    declarations?: Array<Type<ANY> | ANY[]>;
+    imports?: Array<Type<ANY> | ModuleWithProviders<ANY> | ANY[]>;
+    exports?: Array<Type<ANY> | ANY[]>;
+    entryComponents?: Array<Type<ANY> | ANY[]>;
+    bootstrap?: Array<Type<ANY> | ANY[]>;
+    schemas?: Array<SchemaMetadata | ANY[]>;
     id?: string;
     jit?: true;
 }
@@ -584,13 +586,13 @@ export interface Component extends Directive {
     template?: string;
     styleUrls?: string[];
     styles?: string[];
-    animations?: any[];
+    animations?: ANY[];
     encapsulation?: ViewEncapsulation;
     interpolation?: [string, string];
-    entryComponents?: Array<Type<any> | any[]>;
+    entryComponents?: Array<Type<ANY> | ANY[]>;
     preserveWhitespaces?: boolean;
     standalone?: boolean;
-    imports?: (Type<any> | any[])[];
+    imports?: (Type<ANY> | ANY[])[];
     schemas?: SchemaMetadata[];
 }
 
@@ -600,7 +602,7 @@ export interface Directive {
     outputs?: string[]
     providers?: Provider[]
     exportAs?: string
-    queries?: { [key: string]: any }
+    queries?: { [key: string]: ANY }
     host?: { [key: string]: string }
     jit?: true
     standalone?: boolean
