@@ -299,12 +299,33 @@ function fillFixtureMethods<T, DET>(fixture: ComponentFixture<T, DET>): void {
             }
         })
 
+        const attributesDiscriptor = Object.getOwnPropertyDescriptor(DebugElementPrototype, 'attributes')
+        Object.defineProperty(DebugElementPrototype, 'attributes', {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+                const attrs = attributesDiscriptor.get.bind(this)()
+                for (const key of Object.keys(attrs))
+                {
+                    if ( key.startsWith('ng-reflect-') )
+                    {
+                        const key1 = key==='ng-reflect-model'?'ngModel':key.substring(11)
+                        Object.defineProperty(attrs, key1, {
+                            configurable: true,
+                            enumerable: true,
+                            get: function() { return this[key] }
+                        })
+                    }
+                }
+                return attrs
+            }
+        })
+
         Object.defineProperty(DebugElementPrototype, 'text', {
             get: function(): string {
-                return this.nativeElement.innerText
+                return this.attributes.ngModel || this.nativeElement.innerText
             },
             set: function(value: string): void {
-                this.nativeElement.innerText = value
                 this.triggerEventHandler.ngModelChange(value)
             }
         })
