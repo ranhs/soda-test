@@ -19,7 +19,8 @@ export {
     TestBed,
     ComponentFixture,
     SodaFixture,
-    SodaDebugElement
+    SodaDebugElement,
+    CommonEvents
 } from './test-lib/testbed'
 
 import {
