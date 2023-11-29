@@ -853,7 +853,6 @@ function reloadLibraray(_exports: AnExportObject): AnExportObject {
     requireCommand = requireCommand.substring(requireCommand.indexOf('/*S*/')+5)
     requireCommand = requireCommand.substring(0, requireCommand.indexOf('('))
     requireCommand += "(libName)"
-    console.log('requireCommand', requireCommand)
     // run the require command
     const reloadedlib = eval(requireCommand)
     // restore the original cache entry
@@ -873,7 +872,6 @@ export function getLibFromPath(libname: string, caller: string, reload = false):
     }
     let currentLibPath = libname
     if ( !_exports ) {
-        console.warn(`we don't have libraries getters for caller ${caller} - libname = ${libname}`)
         // try getting the library by requring it.
         // if the path is relative we need to fix the relative path to be from current path        
         if ( currentLibPath.startsWith('.')) {

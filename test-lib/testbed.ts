@@ -1,14 +1,9 @@
 //
 // Since TestBed cannot be loaded in Node, and soda-test need to work in Node and Angular,
-// we only import / export the interfaces from angular/core
-// we redefine all the types that are defined as classes in angular/core as interfaces
-// so we can export them instead of the classes (that cannot be loaded if you are in node)
+// we redefine all the types.
+// types that were defined as classes in angular/core we redefine as interfaces
 //
 
-import { TestModuleMetadata, MetadataOverride, TestEnvironmentOptions } from '@angular/core/testing'
-export { TestModuleMetadata, MetadataOverride, TestEnvironmentOptions } from '@angular/core/testing'
-import { Predicate, ProviderToken, BootstrapOptions, CompilerOptions, Provider, ModuleWithProviders, SchemaMetadata, ComponentDecorator, TypeDecorator} from '@angular/core'
-export { Predicate, ProviderToken, BootstrapOptions, CompilerOptions, Provider, ModuleWithProviders, SchemaMetadata} from '@angular/core'
 import { EventEmitter } from 'events'
 import { targetType } from './executables'
 import { argumentDecorator } from '.'
@@ -125,6 +120,7 @@ function getModuleDef<T, TestHostComponent>(component: Type<T>, options: Fixture
 
 type ANY = any // eslint-disable-line @typescript-eslint/no-explicit-any
 type AFunction = Function // eslint-disable-line @typescript-eslint/ban-types
+type AnObject = Object // eslint-disable-line @typescript-eslint/ban-types
 
 class SodaFixtureWrapper<T> implements SodaFixture<T> {
     constructor(private fixtureWrapper: ComponentFixture<TestHostAPI>, selector: string) {
@@ -644,4 +640,140 @@ export enum ViewEncapsulation {
     Emulated = 0,
     None = 2,
     ShadowDom = 3
+}
+
+export interface TestModuleMetadata {
+    providers?: ANY[]
+    declarations?: ANY[]
+    imports?: ANY[]
+    schemas?: Array<SchemaMetadata | ANY[]>
+    teardown?: ModuleTeardownOptions
+    errorOnUnknownElements?: boolean
+    errorOnUnknownProperties?: boolean
+}
+
+interface ModuleTeardownOptions {
+    destroyAfterEach: boolean
+    rethrowErrors?: boolean
+}
+
+export type MetadataOverride<T> = {
+    add?: Partial<T>
+    remove?: Partial<T>
+    set?: Partial<T>
+}
+
+export interface TestEnvironmentOptions {
+    teardown?: ModuleTeardownOptions
+    errorOnUnknownElements?: boolean
+    errorOnUnknownProperties?: boolean
+}
+
+export interface Predicate<T> {
+    (value: T): boolean
+}
+
+export type ProviderToken<T> = Type<T> | AbstractType<T>
+
+interface AbstractType<T> extends AFunction {
+    prototype: T
+}
+
+export interface BootstrapOptions {
+    ngZone?: NgZone | 'zone.js' | 'noop'
+    ngZoneEventCoalescing?: boolean
+    ngZoneRunCoalescing?: boolean
+}
+
+export type CompilerOptions = {
+    useJit?: boolean
+    defaultEncapsulation?: ViewEncapsulation
+    providers?: StaticProvider[]
+    missingTranslation?: MissingTranslationStrategy
+    preserveWhitespaces?: boolean
+}
+
+type StaticProvider = ValueProvider | ExistingProvider | StaticClassProvider | ConstructorProvider | FactoryProvider | ANY[]
+
+interface ValueProvider extends ValueSansProvider {
+    provide: ANY
+    multi?: boolean
+}
+
+interface ValueSansProvider {
+    useValue: ANY
+}
+
+interface ExistingProvider extends ExistingSansProvider {
+    provide: ANY
+    multi?: boolean
+}
+
+interface ExistingSansProvider {
+    useExisting: ANY
+}
+
+interface StaticClassProvider extends StaticClassSansProvider {
+    provide: ANY
+    multi?: boolean
+}
+
+interface StaticClassSansProvider {
+    useClass: Type<ANY>
+    deps: ANY[]
+}
+
+interface ConstructorProvider extends ConstructorSansProvider {
+    provide: Type<ANY>
+    multi?: boolean
+}
+
+interface ConstructorSansProvider {
+    deps?: ANY[]
+}
+
+interface FactoryProvider extends FactorySansProvider {
+    provide: ANY
+    multi?: boolean
+}
+
+interface FactorySansProvider {
+    useFactory: AFunction
+    deps?: ANY[]
+}
+
+enum MissingTranslationStrategy {
+    Error = 0,
+    Warning = 1,
+    Ignore = 2
+}
+
+export type Provider = Type<ANY> | ValueProvider | ClassProvider | ConstructorProvider | ExistingProvider | FactoryProvider | ANY[];
+
+interface ClassProvider extends ClassSansProvider {
+    provide: ANY
+    multi?: boolean
+}
+
+interface ClassSansProvider {
+    useClass: Type<ANY>
+}
+
+export interface ModuleWithProviders<T> {
+    ngModule: Type<T>
+    providers?: Provider[]
+}
+
+export interface SchemaMetadata {
+    name: string
+}
+
+interface ComponentDecorator {
+    (obj: Component): TypeDecorator
+    new (obj: Component): Component
+}
+
+interface TypeDecorator {
+    <T extends Type<ANY>>(type: T): T
+    (target: AnObject, propertyKey?: string | symbol, parameterIndex?: number): void
 }
