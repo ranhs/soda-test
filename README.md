@@ -139,7 +139,10 @@ The following GitHub repositories holds sample codes for soda-test:
     <ul>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular12">angular12</a> - Angular12 sample project</li>
     <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular13">angular13</a> - Angular13 sample project</li>
-    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/main">main</a> - Angular14 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular14">angular14</a> - Angular14 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular14">angular15</a> - Angular15 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/angular14">angular16</a> - Angular16 sample project</li>
+    <li><a href="https://github.com/ranhs/soda-test-karma-samples/tree/main">main</a> - Angular17 sample project</li>
     </ul>
 </li>
 
