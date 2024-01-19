@@ -4,7 +4,7 @@ import { SinonKind, SetStubType, SinonInfo, getInfo, extraInfo } from "./testInf
 import { TestDescribe, targetType, anyFunction } from "./executables";
 import { getCallerFileName, init as rewireInit, isKarma } from "./rewire"
 export { Rewire, createAggregation } from "./rewire"
-import { SuperTest, Test } from 'supertest'
+import { SuperTest, Test } from './supertest'
 import * as chai from "chai"
 
 import * as chaiAsPromised from 'chai-as-promised'

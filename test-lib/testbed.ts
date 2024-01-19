@@ -523,7 +523,7 @@ export interface DebugEventListener {
     callback: AFunction
 }
 
-export interface Type<T> extends Function {
+export interface Type<T> extends AFunction {
     new (...args: unknown[]): T;
 }
 
