@@ -1,6 +1,6 @@
 {
   "name": "soda-test",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Package for Unit and API tests",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -105,6 +105,6 @@
     "fixutil.js",
     "fixJestWorker.js",
     "fixBuilders.js",
-    "fixSuperAgent.js"
+    "nise-5.1.5.tgz"
   ]
 }
