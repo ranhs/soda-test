@@ -42,9 +42,13 @@ Thumbs.db
 # typescript
 **/*.js
 !.eslintrc.js
+!path.js
 !jest.js
 !plan.js
 !fixutil.js
+!fixJestWorker.js
+!fixBuilders.js
+!fixnise.js
 **/*.map
 
 # nyc
