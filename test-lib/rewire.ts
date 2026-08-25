@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'url'
 import { dirname, join, sep} from './path'
 import { anyFunction } from './executables'
 import { setProperty } from './setProperty'
@@ -141,7 +142,21 @@ enum RewireType {
     ReadConfigurationFile
 }
 
-function getRewireType(filename: string): RewireType {
+function getRewireType(filename: any): RewireType {
+    // Node >=22 ESM loader may call the hooked fs.readFileSync with a URL or
+    // Buffer instead of a string path. Coerce it to a string filesystem path.
+    if (typeof filename !== 'string') {
+        try {
+            if (filename && typeof filename === 'object' &&
+                (filename.href || filename.protocol === 'file:')) {
+                filename = fileURLToPath(filename)
+            } else {
+                filename = String(filename)
+            }
+        } catch (e) {
+            return RewireType.None
+        }
+    }
     if ( _readconfiguration_filename && filename === _readconfiguration_filename ) return RewireType.ReadConfigurationFile
     if ( !filename.endsWith('.js') && !filename.endsWith('.ts') ) return RewireType.None
     if ( filename.endsWith('d.ts') ) return RewireType.None
@@ -462,7 +477,16 @@ function normalizeFilename(filename: string): string {
 // fs.readFileSync is called when loading a module
 // if the file loading is a file that need to be rewired, this code patches the answer
 // with the rewire JS code 
-function afterReadFileSync(filename: string, encoding: string, result: string | Buffer): string | Buffer {
+function afterReadFileSync(filename: any, encoding: string, result: string | Buffer): string | Buffer {
+    if (typeof filename !== 'string' ) {
+        try {
+            filename = (filename && typeof filename === 'object' && (filename.href || filename.protocol === 'file:'))
+                       ? fileURLToPath(filename)
+                       : String(filename)
+        } catch (e) {
+            return result
+        }
+    }
     const rewireType = getRewireType(filename)
     if ( rewireType != RewireType.None ) {
         // this file is JS file that is not a test file and is not under node_modules, need to rewire it
